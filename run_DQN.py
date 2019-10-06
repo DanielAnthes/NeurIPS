@@ -6,7 +6,7 @@ from DQN import *
 environment = Environment()
 qnet = Net(4,3,2)
 qnet_hat = Net(4,3,2)
-agent = DQNAgent(qnet, qnet_hat, optimizer=Adam)
+agent = DQNAgent(qnet, qnet_hat, optimizer=Adam, buff_size=10)
 
 episode_count = 1000
 
