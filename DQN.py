@@ -69,20 +69,9 @@ class REINFORCEAgent(object):
         self.optimizer.setup(self.model)
 
         # monitor score and reward
-        self.rewards = []
+        self.rewards  = []
         self.policies = []
-        self.scores = []
-
-        # the agent should remember states and actions he took to be able to compute the loss
-        memory_type = np.dtype([('policy','f8',2), ('reward','f8')])
-        self.memory_store = np.array(list(), dtype=memory_type)
-
-    def add_memory(self, memory):
-        self.memory_store = np.append(self.memory_store, memory)
-
-    def reset_memory(self):
-        memory_type = np.dtype([('policy','f8',2), ('action', 'f8'), ('reward','f8')])
-        self.memory_store = np.array(list(), dtype=memory_type)
+        self.scores   = []
 
     def step(self, reward, state):
 
@@ -105,11 +94,22 @@ class REINFORCEAgent(object):
         """
         Return loss for this episode based on computed scores and accumulated rewards
         """
-        T = len(self.rewards)
-        J_theta = 0
-        for t in range(T):
-            # np.log(self.)
-            pass
+
+        # cost to go
+        Qhat = 0
+
+        loss = 0
+        for t in range(len(self.rewards) - 1, -1, -1):
+
+            Qhat = self.rewards.pop() + Qhat
+
+            _ss = F.squeeze(self.scores.pop(), axis=1) * Qhat
+
+            if _ss.size > 1:
+                _ss = F.sum(_ss, axis=0)
+            loss += F.squeeze(_ss)
+
+        return loss
 
 
     def compute_score(self, action, policy):
@@ -123,11 +123,11 @@ class REINFORCEAgent(object):
         Returns:
             score
         """
-        pass
-
-
-
-
+        # computes log softmax of policy and selects the value for the action that was actually performed
+        score = F.select_item(F.log_softmax(policy), Variable(action))
+        if score.ndim == 1:
+            score = F.expand_dims(score, axis=1)
+        return score
 
 
 

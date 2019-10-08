@@ -7,7 +7,7 @@ environment = Environment()
 network = MLP(n_output=2, n_hidden=3)
 agent = REINFORCEAgent(network, optimizer=Adam())
 
-episode_count = 1
+episode_count = 1000
 
 
 R = np.zeros(episode_count)
