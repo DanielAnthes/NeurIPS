@@ -20,9 +20,9 @@ class Net(nn.Module):
 
 
 class REINFORCE_Agent:
-    def __init__(self, net):
+    def __init__(self, net, actions, learning_rate=0.01):
         self.net        = net
-        self.optimizer  = Adam(self.net.parameters(), lr=0.01)
+        self.optimizer  = Adam(self.net.parameters(), lr=learning_rate)
         self.memory     = list()
         self.actions    = actions
 
@@ -31,7 +31,7 @@ class REINFORCE_Agent:
         policy  = self.net(state)
         probs   = F.softmax(policy, dim=0).data.numpy()
         probs /= sum(probs) # make sure vector sums to 1
-        action  = np.random.choice(actions, size=None, replace=False, p=probs)
+        action  = np.random.choice(self.actions, size=None, replace=False, p=probs)
         return policy, action
 
 
@@ -60,48 +60,83 @@ class REINFORCE_Agent:
         self.memory = list()
 
 
+def train_agent(agent, n_episodes=1000, batch_size=10):
+    env = gym.make("CartPole-v1")
+    agent = REINFORCE_Agent(Net(4,3,2), [0,1])
 
-print("Initializing Environment...")
-env = gym.make("CartPole-v1")
-print("Initializing Agent...")
-agent = REINFORCE_Agent(Net(4,3,2), [0,1])
-print("done.")
+    n_episodes = 1000
+    batch_size = 10
 
-n_episodes = 1000
-batch_size = 10
+    total_rewards = np.zeros(n_episodes)
+    for episode in range(n_episodes):
+        state = env.reset()
+        done = False
+        policies = list()
+        actions  = list()
+        rewards  = list()
+        # run agent and record policies and rewards
+        while not done:
+            # if episode % 1000 == 0:
+            #     env.render()
+            state = torch.tensor(state, dtype=torch.float)
+            policy, action = agent.step(state)
+            state, reward, done, _ = env.step(action)
+            policies.append(policy)
+            actions.append(action)
+            rewards.append(reward)
 
-total_rewards = np.zeros(n_episodes)
-for episode in range(n_episodes):
+        agent.memory.append((policies, actions, rewards))
+        total_rewards[episode] = sum(rewards)
+        if episode % 100 == 0 and episode > 0:
+            print("*** EPISODE ", episode, " ***")
+            print("mean reward: ", np.mean(total_rewards[episode - 100:episode]))
+
+        # only learn once every batch_size episodes to hopefully reduce variance
+        if episode % batch_size == 0 and episode > 0:
+            agent.learn()
+
+    env.close()
+
+    plt.figure()
+    plt.plot(total_rewards)
+    plt.xlabel("Episode")
+    plt.ylabel("Reward")
+    plt.show()
+
+
+def run_agent(agent):
+    env = gym.make("CartPole-v1")
     state = env.reset()
+    env.render()
     done = False
-    policies = list()
-    actions  = list()
-    rewards  = list()
-    # run agent and record policies and rewards
+    total_reward = 0
+
     while not done:
-        # if episode % 1000 == 0:
-        #     env.render()
+        env.render()
         state = torch.tensor(state, dtype=torch.float)
         policy, action = agent.step(state)
         state, reward, done, _ = env.step(action)
-        policies.append(policy)
-        actions.append(action)
-        rewards.append(reward)
+        total_reward += reward
 
-    agent.memory.append((policies, actions, rewards))
-    total_rewards[episode] = sum(rewards)
-    if episode % 100 == 0 and episode > 0:
-        print("*** EPISODE ", episode, " ***")
-        print("mean reward: ", np.mean(total_rewards[episode - 100:episode]))
+    env.close()
+    print("Total Reward: ", total_reward)
+    return total_reward
 
-    # only learn once every batch_size episodes to hopefully reduce variance
-    if episode % batch_size == 0 and episode > 0:
-        agent.learn()
 
-env.close()
+def save_agent(agent, name):
+    filename = name + ".pt"
+    torch.save(agent, filename)
 
-plt.figure()
-plt.plot(total_rewards)
-plt.xlabel("Episode")
-plt.ylabel("Reward")
-plt.show()
+
+def load_agent(name):
+    filename = name + ".pt"
+    return torch.load(filename)
+
+###################################################
+
+
+agent = REINFORCE_Agent(Net(4,3,2), [0,1])
+train_agent(agent)
+
+for _ in range(10):
+    run_agent(agent)
