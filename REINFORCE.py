@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 
 
 class Net(nn.Module):
-    def __init__(self):
+    def __init__(self, num_in, num_hidden, num_out):
         super(Net, self).__init__()
-        self.fc1 = nn.Linear(4,3)  # 6*6 from image dimension
-        self.fc2 = nn.Linear(3,2)
+        self.fc1 = nn.Linear(num_in,num_hidden)  # 6*6 from image dimension
+        self.fc2 = nn.Linear(num_hidden,num_out)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -20,17 +20,18 @@ class Net(nn.Module):
 
 
 class REINFORCE_Agent:
-    def __init__(self):
-        self.net        = Net()
+    def __init__(self, net):
+        self.net        = net
         self.optimizer  = Adam(self.net.parameters(), lr=0.01)
         self.memory     = list()
+        self.actions    = actions
 
 
     def step(self, state):
         policy  = self.net(state)
         probs   = F.softmax(policy, dim=0).data.numpy()
         probs /= sum(probs) # make sure vector sums to 1
-        action  = np.random.choice([0,1], size=None, replace=False, p=probs)
+        action  = np.random.choice(actions, size=None, replace=False, p=probs)
         return policy, action
 
 
@@ -63,11 +64,11 @@ class REINFORCE_Agent:
 print("Initializing Environment...")
 env = gym.make("CartPole-v1")
 print("Initializing Agent...")
-agent = REINFORCE_Agent()
+agent = REINFORCE_Agent(Net(4,3,2), [0,1])
 print("done.")
 
-n_episodes = 10000
-batch_size = 100
+n_episodes = 1000
+batch_size = 10
 
 total_rewards = np.zeros(n_episodes)
 for episode in range(n_episodes):
