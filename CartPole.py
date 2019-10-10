@@ -1,14 +1,14 @@
-from Agents import REINFORCE_Agent, Net
+from Agents import REINFORCE_Agent, DQN_Agent, Net
 from utils import *
 
-resume = True
-agent_name = "reinforce_cartpole"
+resume     = False
+agent_name = "DQN_cartpole"
 
 if resume:
     agent = load_agent(agent_name)
 
 else:
-    agent = REINFORCE_Agent(Net(4,3,2), [0,1], "CartPole-v1")
+    agent = DQN_Agent(Net(4,3,2), Net(4,3,2), [0,1], "CartPole-v1")
 
 
 agent.train(n_episodes=300)

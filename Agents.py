@@ -5,6 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
 import matplotlib.pyplot as plt
+import random
+import copy
 
 
 class Net(nn.Module):
@@ -20,12 +22,13 @@ class Net(nn.Module):
 
 
 class REINFORCE_Agent:
-    def __init__(self, net, actions, env_name, learning_rate=0.01):
+    def __init__(self, net, actions, env_name, learning_rate=0.01, discount=0.9):
         self.net        = net
         self.optimizer  = Adam(self.net.parameters(), lr=learning_rate)
         self.memory     = list()
         self.actions    = actions
         self.env_name   = env_name
+        self.discount   = discount
 
 
     def _step(self, state):
@@ -52,6 +55,7 @@ class REINFORCE_Agent:
                 log_prob = F.log_softmax(policy, dim=0)
                 loss += torch.index_select(log_prob, dim=0, index=torch.tensor(action)) * ctg
                 ctg -= rewards.pop(0)
+                ctg *= self.discount
 
         loss *= - (1/len(self.memory)) # adam tries to minimize, so turn around the loss
         loss.backward()
@@ -119,21 +123,23 @@ class REINFORCE_Agent:
 
 
 
-class DQNAgent:
-    def __init__(self, qnet, qhatnet, actions, env_name, gamma=1, epsilon=1, bufsize=1000, learning_rate=0.01):
-        self.qnet = qnet
-        self.qhatnet = qhatnet
-        self.optimizer  = Adam(self.qnet.parameters(), lr=learning_rate)
-        self.memory     = list()
-        self.actions    = actions
-        self.env_name   = env_name
-        self.gamma      = gamma
-        self.epsilon    = epsilon
-        self.bufsize    = bufsize
-        self.buffer     = [] # shape (state, action, reward, new_state, done)
+class DQN_Agent:
+    def __init__(self, qnet, qhatnet, actions, env_name, gamma=1, epsilon=1, bufsize=1000, minibatchsize=200, learning_rate=0.01):
+        self.qnet          = qnet
+        self.qhatnet       = qhatnet
+        self.optimizer     = Adam(self.qnet.parameters(), lr=learning_rate)
+        self.memory        = list()
+        self.actions       = actions
+        self.env_name      = env_name
+        self.gamma         = gamma
+        self.epsilon       = epsilon
+        self.minibatchsize = minibatchsize
+        self.bufsize       = bufsize
+        self.buffer        = list() # shape (state, action, reward, new_state, done)
 
 
-    def step(self, reward, state):
+
+    def _step(self, state):
         # "toss a coin" to decide whether to take a random action
         coin = np.random.rand()
 
@@ -143,7 +149,7 @@ class DQNAgent:
 
         else:
             state  = torch.tensor(state, dtype=torch.float)
-            Qvals  = self.qnet(state).numpy()
+            Qvals  = self.qnet(state).detach().numpy()
             maxQ   = np.max(Qvals)
             action = np.where(Qvals == maxQ)[0][0]
             return action
@@ -174,6 +180,34 @@ class DQNAgent:
             state = env.reset()
             done = False
             while not done:
+                action = self._step(state)
+                new_state, reward, done, _ = env.step(action)
+                total_rewards[episode] += reward
+                observation = (state, action, reward, new_state, done)
+                self.buffer.append(observation)
+
+            # only learn once buffer is filled
+            if len(self.buffer) >= self.bufsize:
+                self.epsilon = .3 # no longer exclusively take random actions
+                self.buffer = self.buffer[-1000:] # remove "old" observations
+                # sample minibatch
+                indices = random.sample(range(len(self.buffer)), self.minibatchsize)
+                batch = [self.buffer[i] for i in indices]
+
+                loss = 0.0
+                self.optimizer.zero_grad()
+                for transition in batch:
+                    loss += self._loss(transition)
+
+                loss.backward()
+                self.optimizer.step()
+
+                if episode > 0 and episode % update_interval == 0:
+                    self.qhatnet = copy.deepcopy(self.qnet)
+
+            if episode % 100 == 0 and episode > 0:
+                print("*** EPISODE ", episode, " ***")
+                print("mean reward: ", np.mean(total_rewards[episode - 100:episode]))
 
 
     def run(self):
