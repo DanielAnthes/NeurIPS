@@ -1,15 +1,14 @@
-from Agents import REINFORCE_Agent, DQN_Agent, Net
-from utils import *
+from Agents import ReinforceAgent, DQNAgent, Net, ReplayMemory
+from utils import save_agent, load_agent, annealing
 
-resume     = False
+resume = False  # So
 agent_name = "DQN_cartpole"
 
 if resume:
     agent = load_agent(agent_name)
 
 else:
-    agent = DQN_Agent(Net(4,3,2), Net(4,3,2), [0,1], "CartPole-v1")
-
+    agent = DQNAgent(Net(4, 3, 2), Net(4, 3, 2), [0, 1], "CartPole-v1")
 
 agent.train(annealing, n_episodes=10000)
 

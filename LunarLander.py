@@ -1,4 +1,4 @@
-from Agents import REINFORCE_Agent, Net
+from Agents import ReinforceAgent, Net
 from utils import *
 import gym
 
@@ -9,7 +9,7 @@ if resume:
     agent = load_agent(agent_name)
 
 else:
-    agent = REINFORCE_Agent(Net(8,10,4), [0,1,2,3], "LunarLander-v2")
+    agent = ReinforceAgent(Net(8, 10, 4), [0, 1, 2, 3], "LunarLander-v2")
 
 agent.train(n_episodes=1000)
 
