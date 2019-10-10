@@ -20,11 +20,12 @@ class Net(nn.Module):
 
 
 class REINFORCE_Agent:
-    def __init__(self, net, actions, learning_rate=0.01):
+    def __init__(self, net, actions, env_name, learning_rate=0.01):
         self.net        = net
         self.optimizer  = Adam(self.net.parameters(), lr=learning_rate)
         self.memory     = list()
         self.actions    = actions
+        self.env_name   = env_name
 
 
     def _step(self, state):
@@ -61,10 +62,7 @@ class REINFORCE_Agent:
 
 
     def train(self, n_episodes=1000, batch_size=10):
-        env = gym.make("CartPole-v1")
-
-        n_episodes = 1000
-        batch_size = 10
+        env = gym.make(self.env_name)
 
         total_rewards = np.zeros(n_episodes)
         for episode in range(n_episodes):
@@ -102,7 +100,7 @@ class REINFORCE_Agent:
 
 
     def run(self):
-        env = gym.make("CartPole-v1")
+        env = gym.make(self.env_name)
         state = env.reset()
         env.render()
         done = False
@@ -112,6 +110,83 @@ class REINFORCE_Agent:
             env.render()
             state = torch.tensor(state, dtype=torch.float)
             policy, action = self._step(state)
+            state, reward, done, _ = env.step(action)
+            total_reward += reward
+
+        env.close()
+        print("Total Reward: ", total_reward)
+        return total_reward
+
+
+
+class DQNAgent:
+    def __init__(self, qnet, qhatnet, actions, env_name, gamma=1, epsilon=1, bufsize=1000, learning_rate=0.01):
+        self.qnet = qnet
+        self.qhatnet = qhatnet
+        self.optimizer  = Adam(self.qnet.parameters(), lr=learning_rate)
+        self.memory     = list()
+        self.actions    = actions
+        self.env_name   = env_name
+        self.gamma      = gamma
+        self.epsilon    = epsilon
+        self.bufsize    = bufsize
+        self.buffer     = [] # shape (state, action, reward, new_state, done)
+
+
+    def step(self, reward, state):
+        # "toss a coin" to decide whether to take a random action
+        coin = np.random.rand()
+
+        # if random action
+        if coin <= self.epsilon:
+            return random.choice(self.actions)
+
+        else:
+            state  = torch.tensor(state, dtype=torch.float)
+            Qvals  = self.qnet(state).numpy()
+            maxQ   = np.max(Qvals)
+            action = np.where(Qvals == maxQ)[0][0]
+            return action
+
+
+    def _loss(self, transition):
+        state, action, reward, newstate, done = transition
+        state = torch.tensor(state, dtype=torch.float)
+
+        # compute y
+        if done:
+            y = reward
+        else:
+            Q_vals   = self.qhatnet(state)
+            Q_action = torch.index_select(Q_vals, dim=0, index=torch.tensor(action))
+            y        = reward + self.gamma * Q_action
+
+        Qs = self.qnet(state)
+        Q  = torch.index_select(Qs, dim=0, index=torch.tensor(action))
+        return (Q - y)**2
+
+
+    def train(self, n_episodes=1000, update_interval=10):
+        env           = gym.make(self.env_name)
+        total_rewards = np.zeros(n_episodes)
+
+        for episode in range(n_episodes):
+            state = env.reset()
+            done = False
+            while not done:
+
+
+    def run(self):
+        env = gym.make(self.env_name)
+        state = env.reset()
+        env.render()
+        done = False
+        total_reward = 0
+
+        while not done:
+            env.render()
+            state = torch.tensor(state, dtype=torch.float)
+            action = self._step(state)
             state, reward, done, _ = env.step(action)
             total_reward += reward
 

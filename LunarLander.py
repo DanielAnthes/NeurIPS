@@ -1,17 +1,17 @@
 from Agents import REINFORCE_Agent, Net
 from utils import *
+import gym
 
 resume = True
-agent_name = "reinforce_cartpole"
+agent_name = "reinforce_lunar"
 
 if resume:
     agent = load_agent(agent_name)
 
 else:
-    agent = REINFORCE_Agent(Net(4,3,2), [0,1], "CartPole-v1")
+    agent = REINFORCE_Agent(Net(8,10,4), [0,1,2,3], "LunarLander-v2")
 
-
-agent.train(n_episodes=300)
+agent.train(n_episodes=500)
 
 for _ in range(10):
     agent.run()
