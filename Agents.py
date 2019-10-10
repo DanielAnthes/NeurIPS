@@ -6,7 +6,6 @@ import torch.nn.functional as F
 from torch.optim import Adam
 import matplotlib.pyplot as plt
 import random
-import copy
 
 
 class Net(nn.Module):
@@ -89,8 +88,8 @@ class REINFORCE_Agent:
             self.memory.append((policies, actions, rewards))
             total_rewards[episode] = sum(rewards)
             if episode % 100 == 0 and episode > 0:
-                print("*** EPISODE ", episode, " ***")
-                print("mean reward: ", np.mean(total_rewards[episode - 100:episode]))
+                print(f"*** EPISODE {episode} ***")
+                print(f"mean reward: {np.mean(total_rewards[episode - 100:episode])}")
 
             # only learn once every batch_size episodes to hopefully reduce variance
             if episode % batch_size == 0 and episode > 0:
@@ -124,11 +123,10 @@ class REINFORCE_Agent:
 
 
 class DQN_Agent:
-    def __init__(self, qnet, qhatnet, actions, env_name, gamma=1, epsilon=1, bufsize=1000, minibatchsize=200, learning_rate=0.01):
+    def __init__(self, qnet, qhatnet, actions, env_name, gamma=1, epsilon=0.9, bufsize=500, minibatchsize=100, learning_rate=0.1):
         self.qnet          = qnet
         self.qhatnet       = qhatnet
         self.optimizer     = Adam(self.qnet.parameters(), lr=learning_rate)
-        self.memory        = list()
         self.actions       = actions
         self.env_name      = env_name
         self.gamma         = gamma
@@ -156,28 +154,30 @@ class DQN_Agent:
 
 
     def _loss(self, transition):
-        state, action, reward, newstate, done = transition
+        state, action, reward, new_state, done = transition
         state = torch.tensor(state, dtype=torch.float)
 
         # compute y
         if done:
             y = reward
         else:
-            Q_vals   = self.qhatnet(state)
-            Q_action = torch.index_select(Q_vals, dim=0, index=torch.tensor(action))
-            y        = reward + self.gamma * Q_action
+            new_state = torch.tensor(new_state, dtype=torch.float)
+            Q_vals    = self.qhatnet(new_state)
+            Q_action  = torch.index_select(Q_vals, dim=0, index=torch.tensor(action))
+            y         = reward + self.gamma * Q_action
 
         Qs = self.qnet(state)
         Q  = torch.index_select(Qs, dim=0, index=torch.tensor(action))
         return (Q - y)**2
 
 
-    def train(self, n_episodes=1000, update_interval=10):
+    def train(self, epsilon_func, n_episodes=3000, update_interval=100):
         env           = gym.make(self.env_name)
         total_rewards = np.zeros(n_episodes)
 
         for episode in range(n_episodes):
             state = env.reset()
+            self.epsilon = epsilon_func(episode)
             done = False
             while not done:
                 action = self._step(state)
@@ -188,11 +188,9 @@ class DQN_Agent:
 
             # only learn once buffer is filled
             if len(self.buffer) >= self.bufsize:
-                self.epsilon = .3 # no longer exclusively take random actions
-                self.buffer = self.buffer[-1000:] # remove "old" observations
+                self.buffer = self.buffer[-self.bufsize:] # remove "old" observations
                 # sample minibatch
-                indices = random.sample(range(len(self.buffer)), self.minibatchsize)
-                batch = [self.buffer[i] for i in indices]
+                batch = random.sample(self.buffer, self.minibatchsize)
 
                 loss = 0.0
                 self.optimizer.zero_grad()
@@ -203,11 +201,12 @@ class DQN_Agent:
                 self.optimizer.step()
 
                 if episode > 0 and episode % update_interval == 0:
-                    self.qhatnet = copy.deepcopy(self.qnet)
+                    self.qhatnet.load_state_dict(self.qnet.state_dict())
 
             if episode % 100 == 0 and episode > 0:
                 print("*** EPISODE ", episode, " ***")
-                print("mean reward: ", np.mean(total_rewards[episode - 100:episode]))
+                print("mean reward: ", np.mean(total_rewards[episode-100:episode]))
+                print(f"Epsilon: {self.epsilon}")
 
 
     def run(self):

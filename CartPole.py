@@ -11,7 +11,7 @@ else:
     agent = DQN_Agent(Net(4,3,2), Net(4,3,2), [0,1], "CartPole-v1")
 
 
-agent.train(n_episodes=300)
+agent.train(annealing, n_episodes=10000)
 
 for _ in range(10):
     agent.run()
