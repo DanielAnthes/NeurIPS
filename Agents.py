@@ -86,15 +86,16 @@ class DQNAgent:
         if done:
             y = reward
         else:
-            next_state = torch.tensor(next_state, dtype=torch.float)
-            Q_vals = self.qhatnet(next_state)
-            # Q_action = torch.index_select(Q_vals, dim=0, index=torch.tensor(action))
-            Q_action = Q_vals.max()
-            y = reward + self.gamma * Q_action
+            with torch.no_grad():
+                next_state = torch.tensor(next_state, dtype=torch.float)
+                Q_vals = self.qhatnet(next_state)
+                # Q_action = torch.index_select(Q_vals, dim=0, index=torch.tensor(action))
+                Q_action = Q_vals.max()
+                y = reward + self.gamma * Q_action
 
         Qs = self.qnet(state)
         Q = torch.index_select(Qs, dim=0, index=torch.tensor(action))
-        return (Q - y) ** 2
+        return (Q - y) ** 2 # maybe try pytorch loss functions
 
     def train(self, epsilon_func, n_episodes=3000, update_interval=1000, ctg=False):
         losses = list()
@@ -129,12 +130,12 @@ class DQNAgent:
                 batch = self.replay_memory.sample(self.minibatch_size)
 
                 loss = 0.0
-                self.optimizer.zero_grad()
                 for transition in batch:
                     loss += self._loss(transition)
-                losses.append(loss)
+                losses.append(loss) # make sure loss has gradient func
                 loss.backward()
                 self.optimizer.step()
+                self.optimizer.zero_grad()
 
                 if episode > 0 and episode % update_interval == 0:
                     self.qhatnet.load_state_dict(self.qnet.state_dict())
