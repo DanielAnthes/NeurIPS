@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.optim import Adam
+from torch.optim import Adam, SGD
 import matplotlib.pyplot as plt
 import random
 from collections import namedtuple
@@ -46,15 +46,15 @@ class Net(nn.Module):
 
 
 class DQNAgent:
-    def __init__(self, qnet: Net, qhatnet: Net, actions, env_name, replay_memory=ReplayMemory(capacity=500), gamma=1, epsilon=0.9,
-                 minibatch_size=100, learning_rate=0.1):
+    def __init__(self, qnet: Net, qhatnet: Net, actions, env_name, replay_memory=ReplayMemory(capacity=10000), gamma=0.99,
+                 minibatch_size=32, learning_rate=0.1):
         self.qnet = qnet
         self.optimizer = Adam(self.qnet.parameters(), lr=learning_rate)
         self.qhatnet = qhatnet
         self.actions = actions
         self.env_name = env_name
         self.gamma = gamma
-        self.epsilon = epsilon
+        self.epsilon = 0
         self.minibatch_size = minibatch_size
 
         self.replay_memory = replay_memory
@@ -82,7 +82,6 @@ class DQNAgent:
         # state, action, reward, new_state, done = transition
         state, action, next_state, reward, done = transition
         state = torch.tensor(state, dtype=torch.float)
-
         # compute y
         if done:
             y = reward
@@ -97,7 +96,8 @@ class DQNAgent:
         Q = torch.index_select(Qs, dim=0, index=torch.tensor(action))
         return (Q - y) ** 2
 
-    def train(self, epsilon_func, n_episodes=3000, update_interval=100):
+    def train(self, epsilon_func, n_episodes=3000, update_interval=1000, ctg=False):
+        losses = list()
         env = gym.make(self.env_name)
         total_rewards = np.zeros(n_episodes)
 
@@ -105,17 +105,26 @@ class DQNAgent:
             state = env.reset()
             self.epsilon = epsilon_func(episode)
             done = False
+            episode_transitions = list()
             while not done:
                 action = self._step(state)
                 next_state, reward, done, _ = env.step(action)
-                new_state = next_state
                 total_rewards[episode] += reward
+                episode_transitions.append([state, action, next_state, reward, done])
+
+            if ctg:
+                # compute cost to go as reward for transitions
+                episode_transitions = np.array(episode_transitions[::-1])
+                rewards = episode_transitions[:,3]
+                rewards = np.cumsum(rewards)
+                episode_transitions[:,3] = rewards
+
+            for [state, action, next_state, reward, done] in episode_transitions:
                 transition = Transition(state, action, next_state, reward, done)
                 self.replay_memory.push(transition)
 
             # only learn once buffer is filled
             if len(self.replay_memory) >= self.replay_memory.capacity:
-
                 # sample minibatch
                 batch = self.replay_memory.sample(self.minibatch_size)
 
@@ -123,7 +132,7 @@ class DQNAgent:
                 self.optimizer.zero_grad()
                 for transition in batch:
                     loss += self._loss(transition)
-
+                losses.append(loss)
                 loss.backward()
                 self.optimizer.step()
 
@@ -134,8 +143,20 @@ class DQNAgent:
                 print("*** EPISODE ", episode, " ***")
                 print("mean reward: ", np.mean(total_rewards[episode - 100:episode]))
                 print(f"Epsilon: {self.epsilon}")
+        plt.figure()
+        plt.subplot(2,1,1)
+        plt.plot(losses)
+        plt.xlabel("Episode")
+        plt.ylabel("Loss")
+        plt.subplot(2,1,2)
+        plt.plot(total_rewards)
+        plt.xlabel("Episode")
+        plt.ylabel("Reward")
+        plt.show()
+
 
     def run(self):
+        self.epsilon = 0 # no exploration during testing
         env = gym.make(self.env_name)
         state = env.reset()
         env.render()

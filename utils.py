@@ -12,3 +12,9 @@ def load_agent(name):
 
 def annealing(episode):
     return(min(1, 0.1 + np.exp(-0.0005 * episode)))
+
+def random_beginning(episode):
+    if episode < 1000:
+        return 1
+    else:
+        return max([annealing(episode),0.3])

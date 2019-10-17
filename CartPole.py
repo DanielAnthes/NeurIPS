@@ -1,5 +1,5 @@
 from Agents import ReinforceAgent, DQNAgent, Net, ReplayMemory
-from utils import save_agent, load_agent, annealing
+from utils import save_agent, load_agent, annealing, random_beginning
 
 resume = False  # So
 agent_name = "DQN_cartpole"
@@ -10,7 +10,7 @@ if resume:
 else:
     agent = DQNAgent(Net(4, 3, 2), Net(4, 3, 2), [0, 1], "CartPole-v1")
 
-agent.train(annealing, n_episodes=10000)
+agent.train(random_beginning, n_episodes=20000, ctg=False)
 
 for _ in range(10):
     agent.run()
