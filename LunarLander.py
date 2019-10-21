@@ -1,17 +1,17 @@
-from Agents import ReinforceAgent, Net
+from Agents import ReinforceAgent, DQNAgent, Net
 from utils import *
 import gym
 
-resume = True
-agent_name = "reinforce_lunar_large_discount"
+resume = False
+agent_name = "DQN_lunar"
 
 if resume:
     agent = load_agent(agent_name)
 
 else:
-    agent = ReinforceAgent(Net(8, 10, 4), [0, 1, 2, 3], "LunarLander-v2")
+    agent = DQNAgent(Net(8, 10, 4), Net(8, 10, 4), [0, 1, 2, 3], "LunarLander-v2")
 
-agent.train(n_episodes=1000)
+agent.train(random_beginning, n_episodes=10000, ctg=True)
 
 for _ in range(10):
     agent.run()

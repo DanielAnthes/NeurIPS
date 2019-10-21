@@ -97,7 +97,7 @@ class DQNAgent:
         Q = torch.index_select(Qs, dim=0, index=torch.tensor(action))
         return (Q - y) ** 2 # maybe try pytorch loss functions
 
-    def train(self, epsilon_func, n_episodes=3000, update_interval=1000, ctg=False):
+    def train(self, epsilon_func, n_episodes=3000, update_interval=1000, ctg=False, loss_func=F.smooth_l1_loss):
         losses = list()
         env = gym.make(self.env_name)
         total_rewards = np.zeros(n_episodes)
@@ -129,16 +129,36 @@ class DQNAgent:
                 # sample minibatch
                 batch = self.replay_memory.sample(self.minibatch_size)
 
-                loss = 0.0
-                for transition in batch:
-                    loss += self._loss(transition)
-                losses.append(loss) # make sure loss has gradient func
+                # collect Q and y values for loss function
+                Qs = torch.zeros(self.minibatch_size)
+                ys = torch.zeros(self.minibatch_size)
+                for i, transition in enumerate(batch):
+                    # state, action, reward, new_state, done = transition
+                    state, action, next_state, reward, done = transition
+                    state = torch.tensor(state, dtype=torch.float)
+                    # compute y
+                    if done:
+                        y = reward
+                    else:
+                        with torch.no_grad():
+                            next_state = torch.tensor(next_state, dtype=torch.float)
+                            Q_vals = self.qhatnet(next_state)
+                            # Q_action = torch.index_select(Q_vals, dim=0, index=torch.tensor(action))
+                            Q_action = Q_vals.max()
+                            y = reward + self.gamma * Q_action
+
+                    Q = self.qnet(state)
+                    Q = torch.index_select(Q, dim=0, index=torch.tensor(action))
+                    Qs[i] = Q
+                    ys[i] = y
+                loss = loss_func(Qs,ys)
                 loss.backward()
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
                 if episode > 0 and episode % update_interval == 0:
                     self.qhatnet.load_state_dict(self.qnet.state_dict())
+                    print(self.qhatnet.state_dict())
 
             if episode % 100 == 0 and episode > 0:
                 print("*** EPISODE ", episode, " ***")
