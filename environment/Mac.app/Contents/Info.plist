@@ -10,9 +10,9 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>NeurosmashLite</string>
+	<string>Mac</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Unity Player version 2018.4.12f1 (59ddc4c59b4f). (c) 2019 Unity Technologies ApS. All rights reserved.</string>
+	<string>Unity Player version 2018.4.13f1 (497f083a43af). (c) 2019 Unity Technologies ApS. All rights reserved.</string>
 	<key>CFBundleIconFile</key>
 	<string>PlayerIcon.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -38,7 +38,7 @@
 	<key>NSPrincipalClass</key>
 	<string>PlayerApplication</string>
 	<key>UnityBuildNumber</key>
-	<string>59ddc4c59b4f</string>
+	<string>497f083a43af</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>10.9.0</string>
 </dict>
