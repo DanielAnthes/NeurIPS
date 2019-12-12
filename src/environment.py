@@ -1,6 +1,7 @@
 import abc
 from typing import List
 
+State = List[float]
 
 class Environment(abc.ABC):
 
@@ -9,7 +10,7 @@ class Environment(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def step(self, action) -> List[float], int, bool:
+    def step(self, action) -> (State, int, bool):
         """
         Returns environment as tuple: state, reward, done
         """
@@ -23,7 +24,7 @@ class Environment(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def reset(self) -> List[float]:
+    def reset(self) -> State:
         """
         Returns reset state
         """

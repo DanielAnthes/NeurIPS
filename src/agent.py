@@ -3,6 +3,7 @@ from typing import List
 
 from .environment import Environment
 
+Rewards = List[int]
 
 class Agent(abc.ABC):
   """
@@ -50,7 +51,7 @@ class Agent(abc.ABC):
     pass
 
   @abc.abstractmethod
-  def evaluate(self, runs: int) -> List[int]:
+  def evaluate(self, runs: int) -> Rewards:
     """
     Without training, plays "runs" rounds in its environment and returns rewards
     """
