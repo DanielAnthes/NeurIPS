@@ -19,7 +19,7 @@ class Agent(abc.ABC):
     Use the code below as a guideline.
     """
     self.env = env
-    self.actions = env.actionspace
+    self.actions = env.get_actionspace()
     self.curr_state = env.reset()
     self.memory = None
     self.net = None
