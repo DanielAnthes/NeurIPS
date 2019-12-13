@@ -1,7 +1,7 @@
 import abc
 from typing import List
 
-from .environment import Environment
+from environment import Environment
 
 Rewards = List[int]
 
