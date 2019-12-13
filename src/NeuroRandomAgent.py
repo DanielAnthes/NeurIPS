@@ -25,7 +25,8 @@ class NeuroRandomAgent(Agent):
         done = False
 
         while not done:
-            done, reward, _ = self.env.step(self.action())
+            state, reward, done = self.env.step(self.action())
+            print(done)
             rewards.append(reward)
 
         return np.sum(rewards), rewards
