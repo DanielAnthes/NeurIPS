@@ -2,13 +2,16 @@ import torch
 from torch.optim import SGD
 import numpy as np
 import gym
-from Network import Net # TODO implement better network
+from Networks import Net # TODO implement better network
+from agent import Agent
 
-class Worker:
-    def __init__(self, a3c_instance, tmax):
+class Worker(Agent):
+
+    def __init__(self, a3c_instance, tmax, env):
         # TODO correctly initialize things with torch
-        self.policynet = Net(4, 10, 10, 2) # policy network
-        self.valuenet = Net(4, 10, 10, 2) # value function network
+        self.env = env
+        self.policynet = Net(4, 10, 2) # policy network
+        self.valuenet = Net(4, 10, 2) # value function network
         self.tmax = tmax # maximum lookahead
         self.policy_optim = SGD(self.policynet.parameters())
         self.theta_v_optim = SGD(self.valuenet.parameters())
@@ -20,6 +23,10 @@ class Worker:
         self.theta = theta
         self.theta_v = theta_v
 
+    def action(self):
+        # TODO
+        pass
+
     def train(self, Tmax):
         # TODO
         # initialize thread step counter
@@ -27,12 +34,12 @@ class Worker:
         # repeat until maximum number of steps is reached
         for i in range(Tmax):
             # reset gradients
-            self.theta_optim.zero_grad()
+            self.policy_optim.zero_grad()
             self.theta_v_optim.zero_grad()
             self._synchronize_weights(self.a3c_instance.get_theta(), self.a3c_instance.get_theta_v())
             # compute next tmax steps, break if episode has ended
             for tstep in range(self.tmax):
-                # perform a according to policy
+                # perform action according to policy
                 # TODO
                 pass
 
@@ -44,7 +51,7 @@ class Worker:
         # TODO
         return None
 
-    def _loss(self, states, actions, rewards):
+    def calc_loss(self, states, actions, rewards):
         # TODO include entropy?
         # compute policy value of action in state
         current_state = states[0]
@@ -57,3 +64,6 @@ class Worker:
         for k in range(len(states)):
             advantage += self.gamma**k * rewards[k] + self.gamma**k * self._get_value(states[k]) - value_t
         return torch.log(policy_t) * advantage
+
+    def evaluate(self):
+        print("Do not evaluate worker instances directly!")
