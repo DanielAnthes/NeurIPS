@@ -1,5 +1,7 @@
-from environment import Environment
 import gym
+
+from ..environments.environment import Environment
+
 
 class CartpoleEnv(Environment):
 

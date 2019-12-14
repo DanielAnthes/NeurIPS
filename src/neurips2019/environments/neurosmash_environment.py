@@ -1,5 +1,5 @@
-from environment import Environment
-from Neurosmash import Environment as NSEnv
+from .environment import Environment
+from ..util.Neurosmash import Environment as NSEnv
 
 
 class NeurosmashEnvironment(Environment):

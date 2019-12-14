@@ -1,6 +1,8 @@
-from agent import Agent
 from random import choice
 import numpy as np
+
+from .agent import Agent
+
 
 class NeuroRandomAgent(Agent):
 

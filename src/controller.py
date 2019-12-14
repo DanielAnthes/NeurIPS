@@ -1,8 +1,16 @@
 # from neurosmash import NeurosmashEnvironment
 import sys
 import curses
+import time
 
-from neurosmash_environment import NeurosmashEnvironment as NSenv
+from neurips2019.environments.neurosmash_environment import NeurosmashEnvironment as NSenv
+
+
+ENV_TIMESCALE=5
+ENV_SIZE=768
+ENV_PORT=13000
+ENV_IP="127.0.0.1"
+
 
 def get_input(screen):
     char = screen.getch()
@@ -14,20 +22,32 @@ def get_input(screen):
         return 1
     elif char == curses.KEY_DOWN:
         return 0
+    elif char == curses.KEY_BACKSPACE:
+        return 4
+    else:
+        return 0
 
-
-def connect(timescale=1, size=768, port=13000, ip="127.0.0.1"):
-    return NSenv(timescale, size, port, ip)
+def connect():
+    return NSenv(ENV_TIMESCALE, ENV_SIZE, ENV_PORT, ENV_IP)
 
 def run(env, screen):
     memory = []
+    state = rew = done = nstate = None
     while True:
         _in = get_input(screen)
         if _in == -1:
             break
-        if _in != '':
-            screen.addstr(0,0,str(_in))
-            env.step(_in)
+        if _in == '': _in = 0
+        if _in == 4: 
+            state = env.reset()
+            rew = 0
+            done = False
+            continue
+        screen.addstr(1,0,str(_in))
+        nstate, rew, done = env.step(_in)
+        time.sleep(0.1 / ENV_TIMESCALE)
+        memory.append((state, rew, done, nstate))
+        state = nstate
 
     return memory
 
@@ -43,8 +63,10 @@ def main():
     curses.cbreak()
     # map arrow keys to special values
     screen.keypad(True)
+    #
+    screen.addstr(0,0,"Left / Right Arrow to turn. Lower Arrow for straight. q to quit.\n")
     try:
-        env = connect(timescale=1, size=768, port=13000, ip="127.0.0.1")
+        env = connect()
         result = run(env, screen)
         save(result)
     finally:
