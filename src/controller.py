@@ -1,3 +1,8 @@
+"""
+A keyboard controller for neurosmash. ENV variables are up top below imports.
+
+For curses to work on windows, third party binaries need to be installed.
+"""
 # from neurosmash import NeurosmashEnvironment
 import sys
 import curses
