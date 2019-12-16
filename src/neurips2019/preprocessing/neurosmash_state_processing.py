@@ -1,6 +1,10 @@
+import os
 import numpy as np
 import cv2
+import pickle
+from datetime import datetime
 
+STATES_SAVEDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'states/')
 
 def process(state, size=768, outsize=580, tofloat=True, normalize=True):
     """
@@ -72,3 +76,13 @@ def rgb2gray(img):
 
 def _scale_to_int(num, nsize, ref):
     return int(num * nsize/ref + 0.5)
+
+
+def save_states(states, agent_name, savedir = STATES_SAVEDIR):
+    print(savedir)
+    states = np.array(states, dtype=np.int8)
+    filename = f"states_{agent_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.npy"
+    print(filename)
+    with open(os.path.join(savedir, filename), 'wb') as fp:
+        print(fp)
+        np.save(fp, states)
