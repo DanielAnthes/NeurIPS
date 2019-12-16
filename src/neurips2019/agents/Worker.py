@@ -4,10 +4,10 @@ from torch.optim import SGD
 import torch.nn.functional as F
 import numpy as np
 import gym
-from Networks import Net # TODO implement better network
-from agent import Agent
+from neurips2019.agents.Networks import Net # TODO implement better network
+from neurips2019.agents.agent import Agent
 import torch.multiprocessing as mp
-from utils import share_weights, share_gradients
+from neurips2019.agents.utils import share_weights, share_gradients
 
 class Worker(Agent, mp.Process):
 
@@ -16,21 +16,22 @@ class Worker(Agent, mp.Process):
         self.name = name
         self.actions = actions # save possible actions
         self.policynet = Net(4, 10, 2) # policy network
-        self.valuenet = Net(4, 10, 2) # value function network
+        self.valuenet = Net(4, 10, 1) # value function network
 
         # copy weights from shared net
         share_weights(a3c_instance.policynet, self.policynet)
         share_weights(a3c_instance.valuenet, self.valuenet)
 
         self.tmax = tmax # maximum lookahead
-        self.policy_optim = SGD(self.policynet.parameters())
-        self.theta_v_optim = SGD(self.valuenet.parameters())
+        self.policy_optim = SGD(self.policynet.parameters(), lr=0.01)
+        self.theta_v_optim = SGD(self.valuenet.parameters(), lr=0.01)
         self.a3c_instance = a3c_instance # store reference to main agent
         self.gamma = 0.99 # discount value
 
     def action(self, state):
         # performs action according to policy
         # action is picked with probability proportional to policy values
+        state = torch.FloatTensor(state)
         policy = self.policynet(state)
         probs = F.softmax(policy, dim=0).data.numpy()
         probs /= sum(probs)  # make sure vector sums to 1
@@ -38,6 +39,8 @@ class Worker(Agent, mp.Process):
         return policy, action
 
     def train(self, Tmax):
+        print(f"{self.name}: Training started")
+
         state = self.env.reset() # reset environment
 
         # save states, actions and rewards
@@ -46,7 +49,7 @@ class Worker(Agent, mp.Process):
         rewards = list()
 
         # repeat until maximum number of steps is reached
-        while self.a3c_instance.global_counter < Tmax:
+        while self.a3c_instance.global_counter.value < Tmax:
             # reset gradients
             self.policy_optim.zero_grad()
             self.theta_v_optim.zero_grad()
@@ -74,7 +77,7 @@ class Worker(Agent, mp.Process):
             # initialize R
             if not done:
                 R = self._get_value(state)
-            policy_loss, value_loss = self.calc_loss(self, states, actions, rewards)
+            policy_loss, value_loss = self.calc_loss(states, actions, rewards, R)
 
             # compute gradients and update shared network
             policy_loss.backward()
@@ -88,13 +91,13 @@ class Worker(Agent, mp.Process):
                 self.a3c_instance.update_networks()
 
     def _get_value(self, state):
-        state = torch.from_numpy(state)
+        state = torch.FloatTensor(state)
         value = self.valuenet(state)
         return value
 
     def _get_policy(self, current_state, current_action):
-        current_state = torch.from_numpy()
-        current_action = torch.from_numpy(current_action)
+        current_state = torch.FloatTensor(current_state)
+        current_action = torch.LongTensor(current_action)
         policy = self.policynet(current_state)
         policy_action = torch.index_select(policy, dim=0, index=current_action)
         return policy_action
@@ -102,7 +105,7 @@ class Worker(Agent, mp.Process):
     def calc_loss(self, states, actions, rewards, R):
         # TODO include entropy?
         # compute policy value of action in state
-        n_steps = length(rewards)
+        n_steps = len(rewards)
         policy_loss = 0
         value_loss = 0
 
@@ -113,9 +116,10 @@ class Worker(Agent, mp.Process):
             # compute value function at timestep t
             value_t = self._get_value(states[t])
 
-            policy_loss += torch.log(policy_t) * (R - value_t)
-            value_loss += (R - value_t)**2
-
+            policy_loss = torch.log(policy_t) * (R - value_t) + policy_loss
+            value_loss = (R - value_t)**2 + value_loss
+            print(f"policy loss: {policy_loss}")
+            print(f"value loss: {value_loss}")
         return policy_loss, value_loss
 
 

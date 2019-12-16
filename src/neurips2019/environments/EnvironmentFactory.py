@@ -1,14 +1,12 @@
-from environment import Environment
+from neurips2019.environments.environment import Environment
 import abc
-from multithreading import Lock
+from torch.multiprocessing import Value
 
 
 class EnvironmentFactory:
 
     def __init__(self):
-        self.num_instances = 0
-        self.lock = Lock()
-
+        self.num_instances = Value('i', 0)
 
     @abc.abstractmethod
     def get_instance(self):
