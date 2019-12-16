@@ -11,10 +11,8 @@ def process(state, size=768, outsize=580, tofloat=True, normalize=True):
     if tofloat:
         screen = screen.astype(np.float64)
         screen /= 256
-    
-    rows, cols, ch = screen.shape
 
-    bordersize = 69
+    bordersize = _scale_to_int(69, size, 768)
     bordercolor = [0, 0, 0]
 
     screen = cv2.copyMakeBorder(
@@ -28,21 +26,21 @@ def process(state, size=768, outsize=580, tofloat=True, normalize=True):
     )
 
     pts1 = np.float32([
-        [384+bordersize, bordersize],
-        [size+bordersize, 244+bordersize],
-        [384+bordersize, 545+bordersize],
-        [bordersize, 244+bordersize]
+        [_scale_to_int(384, size, 768)+bordersize, bordersize],
+        [size+bordersize, _scale_to_int(244, size, 768)+bordersize],
+        [_scale_to_int(384, size, 768)+bordersize, _scale_to_int(545, size, 768)+bordersize],
+        [bordersize, _scale_to_int(244, size, 768)+bordersize]
     ])
     pts2 = np.float32([
-        [580-20, 22],
-        [580-71, 580-64],
-        [0, 580],
-        [65, 65]
+        [_scale_to_int(580, size, 768)-_scale_to_int(20, size, 768), _scale_to_int(22, size, 768)],
+        [_scale_to_int(580, size, 768)-_scale_to_int(71, size, 768), _scale_to_int(580, size, 768)-_scale_to_int(64, size, 768)],
+        [0, _scale_to_int(580, size, 768)],
+        [_scale_to_int(65, size, 768), _scale_to_int(65, size, 768)]
     ])
 
     M = cv2.getPerspectiveTransform(pts1, pts2)
 
-    screen = cv2.warpPerspective(screen, M, (580, 580))
+    screen = cv2.warpPerspective(screen, M, (outsize, outsize))
 
     if normalize:
         screen = normalize((screen))
@@ -71,3 +69,6 @@ def rgb2gray(img):
     img[:, :, 1] *= 0.35  # 0.5870
     img[:, :, 2] *= 0.25  # 0.1140
     return img.mean(axis=2).astype(dtype)
+
+def _scale_to_int(num, nsize, ref):
+    return int(num * nsize/ref + 0.5)
