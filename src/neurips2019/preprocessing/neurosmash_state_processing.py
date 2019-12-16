@@ -1,22 +1,22 @@
 import os
 import numpy as np
 import cv2
-import pickle
 from datetime import datetime
 
 STATES_SAVEDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'states/')
 
-def process(state, size=768, outsize=580, tofloat=True, normalize=True):
+
+def state_to_screen(state, size=768, outsize=580, tofloat=True, norm=False, gray=False):
     """
-    Currently only works for size=768! size and outsize should as such should not be changed!
     """
+    scaler = lambda x: _scale_to_int(x, size, 768)
     screen = np.reshape(state, (size, size, 3)).astype(np.uint8)
 
     if tofloat:
         screen = screen.astype(np.float64)
         screen /= 256
 
-    bordersize = _scale_to_int(69, size, 768)
+    bordersize = scaler(69)
     bordercolor = [0, 0, 0]
 
     screen = cv2.copyMakeBorder(
@@ -30,26 +30,29 @@ def process(state, size=768, outsize=580, tofloat=True, normalize=True):
     )
 
     pts1 = np.float32([
-        [_scale_to_int(384, size, 768)+bordersize, bordersize],
-        [size+bordersize, _scale_to_int(244, size, 768)+bordersize],
-        [_scale_to_int(384, size, 768)+bordersize, _scale_to_int(545, size, 768)+bordersize],
-        [bordersize, _scale_to_int(244, size, 768)+bordersize]
+        [scaler(384) + bordersize, bordersize],
+        [size + bordersize, scaler(244) + bordersize],
+        [scaler(384) + bordersize, scaler(545) + bordersize],
+        [bordersize, scaler(244) + bordersize]
     ])
     pts2 = np.float32([
-        [_scale_to_int(580, size, 768)-_scale_to_int(20, size, 768), _scale_to_int(22, size, 768)],
-        [_scale_to_int(580, size, 768)-_scale_to_int(71, size, 768), _scale_to_int(580, size, 768)-_scale_to_int(64, size, 768)],
-        [0, _scale_to_int(580, size, 768)],
-        [_scale_to_int(65, size, 768), _scale_to_int(65, size, 768)]
+        [scaler(580) - scaler(20), scaler(22)],
+        [scaler(580) - scaler(71), scaler(580) - scaler(64)],
+        [0, scaler(580)],
+        [scaler(65), scaler(65)]
     ])
 
     M = cv2.getPerspectiveTransform(pts1, pts2)
 
     screen = cv2.warpPerspective(screen, M, (outsize, outsize))
 
-    if normalize:
-        screen = normalize((screen))
+    if gray:
+        screen = rgb2gray(screen)
+    if norm:
+        screen = normalize(screen)
 
     return screen
+
 
 def normalize(picture, newmin=0, newmax=255):
     #     dst = np.zeros(picture.shape)
@@ -74,11 +77,12 @@ def rgb2gray(img):
     img[:, :, 2] *= 0.25  # 0.1140
     return img.mean(axis=2).astype(dtype)
 
+
 def _scale_to_int(num, nsize, ref):
-    return int(num * nsize/ref + 0.5)
+    return int(num * (nsize / ref) + 0.5)
 
 
-def save_states(states, agent_name, savedir = STATES_SAVEDIR):
+def save_states(states, agent_name, savedir=STATES_SAVEDIR):
     print(savedir)
     states = np.array(states, dtype=np.int8)
     filename = f"states_{agent_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.npy"
