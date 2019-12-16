@@ -9,10 +9,11 @@ from agent import Agent
 import torch.multiprocessing as mp
 from utils import share_weights, share_gradients
 
-class Worker(Agent):
+class Worker(Agent, mp.Process):
 
-    def __init__(self, a3c_instance, tmax, env, actions):
-        self.env = env
+    def __init__(self, a3c_instance, tmax, env_factory, actions, name):
+        self.env = env_factory.get_instance()
+        self.name = name
         self.actions = actions # save possible actions
         self.policynet = Net(4, 10, 2) # policy network
         self.valuenet = Net(4, 10, 2) # value function network
@@ -57,10 +58,6 @@ class Worker(Agent):
             # compute next tmax steps, break if episode has ended
             for tstep in range(self.tmax):
 
-                # increment global counter
-                with self.a3c_instance.lock:
-                    self.a3c_instance.global_counter += 1
-
                 # perform action according to policy
                 states.append(state)
                 policy, action = self.action(state)
@@ -69,17 +66,19 @@ class Worker(Agent):
                 rewards.append(reward)
 
                 if done: # stop early if we reach a terminal state
+                    # increment global episode counter
+                    with self.a3c_instance.global_counter.get_lock():
+                        self.a3c_instance.global_counter.value += 1
+                        R = 0
                     break
             # initialize R
-            if done:
-                R = 0
-            else:
+            if not done:
                 R = self._get_value(state)
             policy_loss, value_loss = self.calc_loss(self, states, actions, rewards)
 
             # compute gradients and update shared network
-            self.policy_optim.backward()
-            self.value_optim.backward()
+            policy_loss.backward()
+            value_loss.backward()
 
             # make sure agents do not override each others gradients
             # TODO maybe this is not needed
