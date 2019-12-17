@@ -28,7 +28,7 @@ class A3CAgent(Agent):
         return_dict = manager.dict()
         processes = list()
         for i in range(num_processes):
-            worker = Worker(self, 10, self.env_factory, self.actions, i)
+            worker = Worker(self, 10, 0.3, self.env_factory, self.actions, i)
             processes.append(Process(target=worker.train, args=(Tmax,return_dict)))
         for p in processes:
             p.start()
@@ -81,7 +81,7 @@ class A3CAgent(Agent):
         plt.scatter(range(num_episodes), scores)
         mean_score = np.mean(scores)
         plt.plot([0, num_episodes-1], [mean_score, mean_score], color='orange')
-        plt.legend(["scores", "mean score"])
+        plt.legend(["mean score", "scores"])
         print(f"mean score: {mean_score}")
         plt.show()
         return scores, mean_score

@@ -8,13 +8,15 @@ from neurips2019.agents.Networks import Net # TODO implement better network
 from neurips2019.agents.agent import Agent
 import torch.multiprocessing as mp
 from neurips2019.agents.utils import share_weights, share_gradients
+from random import random, choice
 
 class Worker(Agent, mp.Process):
 
-    def __init__(self, a3c_instance, tmax, env_factory, actions, idx):
+    def __init__(self, a3c_instance, tmax, epsilon, env_factory, actions, idx):
         self.env = env_factory.get_instance()
         self.name = f"worker - {idx}"
         self.idx = idx
+        self.epsilon = epsilon
         self.actions = actions # save possible actions
         self.policynet = Net(4, 10, 2) # policy network
         self.valuenet = Net(4, 10, 1) # value function network
@@ -36,8 +38,11 @@ class Worker(Agent, mp.Process):
         with torch.no_grad(): # only save gradient information when calculating the loss TODO: possible source of screwups
             policy = self.policynet(state)
             probs = F.softmax(policy, dim=0).data.numpy()
-            probs /= sum(probs)  # make sure vector sums to 1
-            action = np.random.choice(self.actions, size=None, replace=False, p=probs)
+            idx = np.argmax(probs)
+            if random() < self.epsilon:
+                action = choice(self.actions)
+            else:
+                action = self.actions[idx]
         return policy, action
 
     def train(self, Tmax, return_dict):
@@ -97,7 +102,7 @@ class Worker(Agent, mp.Process):
         print(f"storing results to {self.idx}-policyloss and {self.idx}-valueloss")
         return_dict[f"{self.idx}-policyloss"] = policy_losses
         return_dict[f"{self.idx}-valueloss"] = value_losses
-                
+ 
     def _get_value(self, state):
         state = torch.FloatTensor(state)
         value = self.valuenet(state)
