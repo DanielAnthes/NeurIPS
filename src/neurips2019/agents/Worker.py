@@ -6,9 +6,11 @@ import numpy as np
 import gym
 from neurips2019.agents.Networks import Net # TODO implement better network
 from neurips2019.agents.agent import Agent
+from neurips2019.agents.utils import save_agent
 import torch.multiprocessing as mp
 from neurips2019.agents.utils import share_weights, share_gradients
 from random import random, choice
+
 
 class Worker(Agent, mp.Process):
 
