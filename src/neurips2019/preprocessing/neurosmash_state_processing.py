@@ -45,8 +45,9 @@ def state_to_screen(state, size=None, outsize=580, tofloat=True, norm=False, gra
     ])
 
     M = cv2.getPerspectiveTransform(pts1, pts2)
-
-    screen = cv2.warpPerspective(screen, M, (outsize, outsize))
+    rect = scaler(580)
+    screen = cv2.warpPerspective(screen, M, (rect, rect))
+    screen = cv2.resize(screen, (outsize, outsize))
 
     if gray:
         screen = rgb2gray(screen)
