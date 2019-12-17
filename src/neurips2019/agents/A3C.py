@@ -2,11 +2,12 @@ import torch
 import torch.nn as nn
 from torch.optim import SGD
 import torch.nn.functional as F
-from torch.multiprocessing import Lock, Value, Process
+from torch.multiprocessing import Lock, Value, Process, Manager
 from neurips2019.agents.agent import Agent
 from neurips2019.agents.Networks import Net
 from neurips2019.agents.Worker import Worker
 import numpy as np
+import matplotlib.pyplot as plt
 
 class A3CAgent(Agent):
     def __init__(self, tmax, env_factory, actions):
@@ -14,8 +15,8 @@ class A3CAgent(Agent):
         self.policynet = Net(4, 10, 2) # parameters of policy network
         self.valuenet = Net(4, 10, 1) # parameters for value network
         self.tmax = tmax # maximum lookahead
-        self.policy_optim = SGD(self.policynet.parameters(), lr=0.01)
-        self.value_optim = SGD(self.valuenet.parameters(), lr=0.01)
+        self.policy_optim = SGD(self.policynet.parameters(), lr=0.1)
+        self.value_optim = SGD(self.valuenet.parameters(), lr=0.1)
         self.global_counter = Value('i', 0) # global episode counter
         self.env_factory = env_factory
         self.actions = actions
@@ -23,14 +24,27 @@ class A3CAgent(Agent):
 
     def train(self, Tmax, num_processes):
         # repeat for training iterations
+        manager = Manager()
+        return_dict = manager.dict()
         processes = list()
         for i in range(num_processes):
-            worker = Worker(self, 10, self.env_factory, self.actions, f"worker-{i}")
-            processes.append(Process(target=worker.train, args=(Tmax,)))
+            worker = Worker(self, 10, self.env_factory, self.actions, i)
+            processes.append(Process(target=worker.train, args=(Tmax,return_dict)))
         for p in processes:
             p.start()
         for p in processes:
             p.join()
+
+        plt.figure()
+        for i in range(num_processes):
+            plt.subplot(num_processes,1,i+1)
+            pl = return_dict[f"{i}-policyloss"]
+            vl = return_dict[f"{i}-valueloss"]
+            plt.plot(range(len(pl)), pl, color="blue")
+            plt.plot(range(len(vl)), vl, color="orange")
+            plt.legend(["policy loss", "value loss"])
+            plt.title(f"worker {i}")
+        plt.show()
 
     def update_networks(self):
         self.policy_optim.step()
@@ -39,6 +53,7 @@ class A3CAgent(Agent):
     def action(self, state):
         # performs action according to policy
         # action is picked with probability proportional to policy values
+        state = torch.FloatTensor(state)
         policy = self.policynet(state)
         probs = F.softmax(policy, dim=0).data.numpy()
         probs /= sum(probs)  # make sure vector sums to 1
@@ -49,6 +64,24 @@ class A3CAgent(Agent):
         print("loss should be calculated in the Workers")
         return None
 
-    def evaluate(self):
-        # TODO
-        pass
+    def evaluate(self, num_episodes):
+        env = self.env_factory.get_instance()
+        scores = list()
+        for _ in range(num_episodes):
+            episode_reward = 0
+            done = False
+            state = env.reset()
+            while not done:
+                _, action = self.action(state)
+                state, reward, done = env.step(action)
+                episode_reward += reward
+            scores.append(episode_reward)
+        # plot results
+        plt.figure()
+        plt.scatter(range(num_episodes), scores)
+        mean_score = np.mean(scores)
+        plt.plot([0, num_episodes-1], [mean_score, mean_score], color='orange')
+        plt.legend(["scores", "mean score"])
+        print(f"mean score: {mean_score}")
+        plt.show()
+        return scores, mean_score
