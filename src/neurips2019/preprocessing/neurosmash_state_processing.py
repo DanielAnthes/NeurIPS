@@ -6,9 +6,11 @@ from datetime import datetime
 STATES_SAVEDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'states/')
 
 
-def state_to_screen(state, size=768, outsize=580, tofloat=True, norm=False, gray=False):
-    """
-    """
+def state_to_screen(state, size=None, outsize=580, tofloat=True, norm=False, gray=False):
+
+    if not size:
+        size = np.int(np.sqrt(len(state)/3))
+
     scaler = lambda x: _scale_to_int(x, size, 768)
     screen = np.reshape(state, (size, size, 3)).astype(np.uint8)
 
