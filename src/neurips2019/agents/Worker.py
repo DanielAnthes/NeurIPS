@@ -12,14 +12,14 @@ from random import random, choice
 
 class Worker(Agent, mp.Process):
 
-    def __init__(self, a3c_instance, tmax, epsilon, env_factory, actions, idx):
+    def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, epsilon, env_factory, actions, idx):
         self.env = env_factory.get_instance()
         self.name = f"worker - {idx}"
         self.idx = idx
         self.epsilon = epsilon
         self.actions = actions # save possible actions
-        self.policynet = Net(4, 10, 2) # policy network
-        self.valuenet = Net(4, 10, 1) # value function network
+        self.policynet = policynetfunc()
+        self.valuenet = valuenetfunc()
 
         # copy weights from shared net
         share_weights(a3c_instance.policynet, self.policynet)
@@ -45,13 +45,15 @@ class Worker(Agent, mp.Process):
                 action = self.actions[idx]
         return policy, action
 
-    def train(self, Tmax, return_dict):
+    def train(self, Tmax, return_dict, save_interval=10000):
         print(f"{self.name}: Training started")
 
         value_losses = list()
         policy_losses = list()
+        reward_eps = list()
 
         state = self.env.reset() # reset environment
+
 
         # repeat until maximum number of episodes is reached
         while self.a3c_instance.global_counter.value < Tmax:
@@ -60,6 +62,9 @@ class Worker(Agent, mp.Process):
             value_loss = torch.Tensor([0])
             # self.policy_optim.zero_grad() # workers should not need their own optimizers
             # self.theta_v_optim.zero_grad()
+
+            # remember total episode reward
+            reward_ep = 0
 
             # copy weights from shared net
             share_weights(self.a3c_instance.policynet, self.policynet)
@@ -76,18 +81,24 @@ class Worker(Agent, mp.Process):
                 state, reward, done = self.env.step(action)
                 actions.append(action)
                 rewards.append(reward)
+                reward_ep += reward
 
                 if done: # stop early if we reach a terminal state
                     # increment global episode counter
                     with self.a3c_instance.global_counter.get_lock():
                         self.a3c_instance.global_counter.value += 1
-                        if self.a3c_instance.global_counter.value % 100 == 0:
+                        if self.a3c_instance.global_counter.value % 100 == 0 and self.a3c_instance.global_counter.value > 0:
                             print(f"Global Counter: {self.a3c_instance.global_counter.value}")
+                            print(f"current score: {reward_ep}")
                     state = self.env.reset()
+                    if self.a3c_instance.global_counter.value % save_interval == 0:
+                        save_agent(self.a3c_instance, f"checkpoint-{self.a3c_instance.global_counter.value}")
                     break
+
             policy_loss, value_loss = self.calc_loss(states, actions, rewards, done)
             policy_losses.append(policy_loss.detach().numpy()[0])
             value_losses.append(value_loss.detach().numpy()[0])
+            reward_eps.append(reward_ep)
 
             # compute gradients and update shared network
             policy_loss.backward(retain_graph=True) # retain graph as it is needed to backpropagate value_loss as well
@@ -102,6 +113,7 @@ class Worker(Agent, mp.Process):
         print(f"storing results to {self.idx}-policyloss and {self.idx}-valueloss")
         return_dict[f"{self.idx}-policyloss"] = policy_losses
         return_dict[f"{self.idx}-valueloss"] = value_losses
+        return_dict[f"{self.idx}-reward_ep"] = reward_eps
  
     def _get_value(self, state):
         state = torch.FloatTensor(state)
@@ -111,7 +123,7 @@ class Worker(Agent, mp.Process):
     def _get_policy(self, current_state, current_action):
         # TODO Softmax applied on policy to avoid negative logarithms in loss, this may not be ideal
         current_state = torch.FloatTensor(current_state)
-        current_action = torch.LongTensor([current_action]) # convert current_action to tensor
+        current_action = torch.LongTensor([self.actions.index(current_action)]) # convert current_action to tensor
         policy = self.policynet(current_state)
         policy = F.softmax(policy, dim=0)
         policy_action = torch.index_select(policy, dim=0, index=current_action)

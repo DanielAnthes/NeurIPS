@@ -18,3 +18,13 @@ def share_gradients(from_net, to_net):
     to_params = to_net.parameters()
     for from_param, to_param in zip(from_params, to_params):
         to_param._grad = from_param.grad
+
+def save_agent(agent, name):
+    filename = name + ".pt"
+    torch.save(agent, filename)
+
+
+def load_agent(name):
+    filename = name + ".pt"
+    return torch.load(filename)
+

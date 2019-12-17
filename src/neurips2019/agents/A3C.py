@@ -10,13 +10,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class A3CAgent(Agent):
-    def __init__(self, tmax, env_factory, actions):
+    def __init__(self, tmax, env_factory, actions, policynetfunc, valuenetfunc):
         # TODO correctly initialize things
-        self.policynet = Net(4, 10, 2) # parameters of policy network
-        self.valuenet = Net(4, 10, 1) # parameters for value network
+        self.policynet = policynetfunc()
+        self.valuenet = valuenetfunc()
+        self.policynetfunc = policynetfunc # save 'constructors' of network to create workers
+        self.valuenetfunc = valuenetfunc
         self.tmax = tmax # maximum lookahead
-        self.policy_optim = SGD(self.policynet.parameters(), lr=0.1)
-        self.value_optim = SGD(self.valuenet.parameters(), lr=0.1)
+        self.policy_optim = SGD(self.policynet.parameters(), lr=0.0001)
+        self.value_optim = SGD(self.valuenet.parameters(), lr=0.0001)
         self.global_counter = Value('i', 0) # global episode counter
         self.env_factory = env_factory
         self.actions = actions
@@ -26,9 +28,10 @@ class A3CAgent(Agent):
         # repeat for training iterations
         manager = Manager()
         return_dict = manager.dict()
+        return_dict["scores"] = list()
         processes = list()
         for i in range(num_processes):
-            worker = Worker(self, 10, 0.3, self.env_factory, self.actions, i)
+            worker = Worker(self, self.policynetfunc, self.valuenetfunc, 10, 0.3, self.env_factory, self.actions, i)
             processes.append(Process(target=worker.train, args=(Tmax,return_dict)))
         for p in processes:
             p.start()
@@ -44,6 +47,14 @@ class A3CAgent(Agent):
             plt.plot(range(len(vl)), vl, color="orange")
             plt.legend(["policy loss", "value loss"])
             plt.title(f"worker {i}")
+        plt.show()
+
+        plt.figure()
+        for i in range(num_processes):
+            plt.subplot(num_processes,1,i+1)
+            scores = return_dict[f"{i}-reward_ep"]
+            plt.plot(range(len(scores)), scores, color="orange")
+            plt.title(f"worker {i} - scores")
         plt.show()
 
     def update_networks(self):
