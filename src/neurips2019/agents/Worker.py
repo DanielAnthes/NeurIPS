@@ -94,7 +94,8 @@ class Worker(Agent, mp.Process):
                             print(f"current score: {reward_ep}")
                     state = self.env.reset()
                     if self.a3c_instance.global_counter.value % save_interval == 0:
-                        save_agent(self.a3c_instance, f"checkpoint-{self.a3c_instance.global_counter.value}")
+                         save_agent(self.a3c_instance.policynet, f"checkpoint-policy-{self.a3c_instance.global_counter.value}")
+                         save_agent(self.a3c_instance.valuenet, f"checkpoint-value-{self.a3c_instance.global_counter.value}")
                     break
 
             policy_loss, value_loss = self.calc_loss(states, actions, rewards, done)
