@@ -50,7 +50,6 @@ class A3CAgent(Agent):
             plt.plot(range(len(vl)), vl, color="orange")
             plt.legend(["policy loss", "value loss"])
             plt.title(f"worker {i}")
-        plt.show(block=False)
 
         plt.figure()
         for i in range(num_processes):
@@ -58,7 +57,6 @@ class A3CAgent(Agent):
             scores = return_dict[f"{i}-reward_ep"]
             plt.plot(range(len(scores)), scores, color="orange")
             plt.title(f"worker {i} - scores")
-        plt.show(block=False)
 
     def update_networks(self):
         self.policy_optim.step()
@@ -97,8 +95,8 @@ class A3CAgent(Agent):
         plt.plot([0, num_episodes-1], [mean_score, mean_score], color='orange')
         plt.legend(["mean score", "scores"])
         print(f"mean score: {mean_score}")
-        plt.show(block=False)
         return scores, mean_score
+
 
     def save_model(self, name):
         torch.save(self.policynet.state_dict(), f"{name}-policynet.pt")
