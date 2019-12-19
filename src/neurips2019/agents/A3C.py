@@ -24,6 +24,10 @@ class A3CAgent(Agent):
         self.lock = Lock()
 
     def train(self, Tmax, num_processes):
+        # reset iteration counter
+        with self.global_counter.get_lock():
+            self.global_counter.value = 0
+
         # repeat for training iterations
         manager = Manager()
         return_dict = manager.dict()
