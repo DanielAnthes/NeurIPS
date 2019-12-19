@@ -1,31 +1,31 @@
-from neurips2019.environments.LunarLanderFactory import LunarLanderFactory
+from neurips2019.environments.CartpoleFactory import CartpoleFactory
 from neurips2019.agents.A3C import A3CAgent
 from neurips2019.agents.Networks import Net
 import matplotlib.pyplot as plt
 
 def get_policynet():
-    return Net(8,25,4)
+    return Net(4,25,2)
 
 def get_valuenet():
-    return Net(8,25,1)
+    return Net(4,25,1)
 
 
 ### CONFIG
-num_train_blocks = 4
-block_size = 300
+num_train_blocks = 1
+block_size = 5000
 num_workers = 8
 show_immediate = False # show plots after each training set
-keep_plots = False # show plots after script has finished
+keep_plots = True # show plots after script has finished
 debug = True
 ###
 
-agent = A3CAgent(50, LunarLanderFactory(), [0,1,2,3], get_policynet, get_valuenet)
+agent = A3CAgent(50, CartpoleFactory(), [0,1], get_policynet, get_valuenet)
 
 plt.ion() # show plots in a non blocking way
 for i in range(num_train_blocks): # train in blocks and save checkpoints
     print(f"Starting Training Block {i}")
     agent.train(block_size ,num_workers) # train for total of 10000 episodes, using 4 workers
-    agent.evaluate(100)
+    agent.evaluate(500)
     agent.save_model(f"checkpoint-{i}")
     if show_immediate:
         plt.draw()

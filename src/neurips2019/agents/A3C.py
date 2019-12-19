@@ -34,7 +34,7 @@ class A3CAgent(Agent):
         return_dict["scores"] = list()
         processes = list()
         for i in range(num_processes):
-            worker = Worker(self, self.policynetfunc, self.valuenetfunc, 10, 0.3, self.env_factory, self.actions, i)
+            worker = Worker(self, self.policynetfunc, self.valuenetfunc, 100, 0.1, self.env_factory, self.actions, i)
             processes.append(Process(target=worker.train, args=(Tmax,return_dict)))
         for p in processes:
             p.start()

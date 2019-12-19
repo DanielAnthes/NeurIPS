@@ -1,5 +1,6 @@
 # https://github.com/ikostrikov/pytorch-a3c/blob/48d95844755e2c3e2c7e48bbd1a7141f7212b63f/train.py#L9 for inspiration
 import torch
+import torch.nn as nn
 from torch.optim import SGD
 import torch.nn.functional as F
 import numpy as np
@@ -21,6 +22,7 @@ class Worker(Agent, mp.Process):
         self.actions = actions # save possible actions
         self.policynet = policynetfunc()
         self.valuenet = valuenetfunc()
+        self.NLL = nn.NLLLoss()
 
         # copy weights from shared net
         share_weights(a3c_instance.policynet, self.policynet)
@@ -93,9 +95,13 @@ class Worker(Agent, mp.Process):
                             print(f"current score: {reward_ep}")
                     state = self.env.reset()
                     break
+            if done:
+                R = 0
+            else:
+                R = self._get_value(state) # bootstrap reward from value of last known state
 
-            policy_loss, value_loss = self.calc_loss(states, actions, rewards, done)
-            print(policy_loss)
+            policy_loss, value_loss = self.calc_loss(states, actions, rewards, R)
+            # print(value_loss)
             policy_losses.append(policy_loss.detach().numpy()[0])
             value_losses.append(value_loss.detach().numpy()[0])
             reward_eps.append(reward_ep)
@@ -125,18 +131,14 @@ class Worker(Agent, mp.Process):
         current_state = torch.FloatTensor(current_state)
         current_action = torch.LongTensor([self.actions.index(current_action)]) # convert current_action to tensor
         policy = self.policynet(current_state)
-        policy = F.softmax(policy, dim=0)
+        # policy = F.softmax(policy, dim=0)
         policy_action = torch.index_select(policy, dim=0, index=current_action)
         return policy_action
 
-    def calc_loss(self, states, actions, rewards, done):
+    def calc_loss(self, states, actions, rewards, R):
         # TODO include entropy?
         # TODO BUG: policy loss sometimes become NaN, why?
-        # initialize R
-        if done:
-            R = 0
-        else:
-            R = self._get_value(states[-1]) # bootstrap from last known state
+        # TODO BUG: value loss explodes and then becomes NaN, this probably causes the policy loss bug
 
         # compute policy value of action in state
         n_steps = len(rewards)
@@ -145,11 +147,11 @@ class Worker(Agent, mp.Process):
         for t in range(n_steps-1,-1,-1): # traverse backwards through time
             R = rewards[t] + self.gamma * R
             # calculate policy value at timestep t
-            policy_t = self._get_policy(states[t], actions[t]) 
+            policy_t = self._get_policy(states[t], actions[t])
             # compute value function at timestep t
             value_t = self._get_value(states[t])
-
-            policy_loss += torch.log(policy_t) * (R - value_t)
+            #policy_loss -= policy_t * (R - value_t)
+            policy_loss += F.log_softmax(policy_t) * (R - value_t)
             value_loss += (R - value_t)**2
         return policy_loss, value_loss
 
