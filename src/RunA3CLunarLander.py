@@ -14,6 +14,8 @@ def get_valuenet():
 num_train_blocks = 4
 block_size = 300
 num_workers = 8
+show_immediate = False # show plots after each training set
+keep_plots = False # show plots after script has finished
 ###
 
 agent = A3CAgent(50, LunarLanderFactory(), [0,1,2,3], get_policynet, get_valuenet)
@@ -24,7 +26,9 @@ for i in range(num_train_blocks): # train in blocks and save checkpoints
     agent.train(block_size ,num_workers) # train for total of 10000 episodes, using 4 workers
     agent.evaluate(100)
     agent.save_model(f"checkpoint-{i}")
-    plt.draw()
-    plt.pause(1) # give pyplot time to draw the plots
+    if show_immediate:
+        plt.draw()
+        plt.pause(1) # give pyplot time to draw the plots
 plt.ioff()
-plt.show() # make sure program does not exit so that plots stay open
+if keep_plots:
+    plt.show() # make sure program does not exit so that plots stay open
