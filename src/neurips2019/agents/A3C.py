@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 
 class A3CAgent(Agent):
     def __init__(self, tmax, env_factory, actions, policynetfunc, valuenetfunc):
-        # TODO correctly initialize things
         self.policynet = policynetfunc()
         self.valuenet = valuenetfunc()
         self.policynetfunc = policynetfunc # save 'constructors' of network to create workers
@@ -47,7 +46,7 @@ class A3CAgent(Agent):
             plt.plot(range(len(vl)), vl, color="orange")
             plt.legend(["policy loss", "value loss"])
             plt.title(f"worker {i}")
-        plt.show()
+        plt.show(block=False)
 
         plt.figure()
         for i in range(num_processes):
@@ -55,7 +54,7 @@ class A3CAgent(Agent):
             scores = return_dict[f"{i}-reward_ep"]
             plt.plot(range(len(scores)), scores, color="orange")
             plt.title(f"worker {i} - scores")
-        plt.show()
+        plt.show(block=False)
 
     def update_networks(self):
         self.policy_optim.step()
@@ -94,5 +93,14 @@ class A3CAgent(Agent):
         plt.plot([0, num_episodes-1], [mean_score, mean_score], color='orange')
         plt.legend(["mean score", "scores"])
         print(f"mean score: {mean_score}")
-        plt.show()
+        plt.show(block=False)
         return scores, mean_score
+
+    def save_model(self, name):
+        torch.save(self.policynet.state_dict(), f"{name}-policynet.pt")
+        torch.save(self.valuenet.state_dict(), f"{name}-valuenet.pt")
+
+    def load_model(self, name):
+        self.policynet.load_state_dict(torch.load(f"{name}-policynet.pt"))
+        self.valuenet.load_state_dict(torch.load(f"{name}-valuenet.pt"))
+
