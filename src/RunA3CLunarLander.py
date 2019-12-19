@@ -16,6 +16,7 @@ block_size = 300
 num_workers = 8
 show_immediate = False # show plots after each training set
 keep_plots = False # show plots after script has finished
+debug = True
 ###
 
 agent = A3CAgent(50, LunarLanderFactory(), [0,1,2,3], get_policynet, get_valuenet)
@@ -29,6 +30,14 @@ for i in range(num_train_blocks): # train in blocks and save checkpoints
     if show_immediate:
         plt.draw()
         plt.pause(1) # give pyplot time to draw the plots
+
+    if debug:
+        print("########### DEBUG ############")
+        print("policynet weights")
+        print(agent.policynet.state_dict())
+        print("########### \DEBUG ############\n\n")
+
+
 plt.ioff()
 if keep_plots:
     plt.show() # make sure program does not exit so that plots stay open

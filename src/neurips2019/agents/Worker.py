@@ -95,6 +95,7 @@ class Worker(Agent, mp.Process):
                     break
 
             policy_loss, value_loss = self.calc_loss(states, actions, rewards, done)
+            print(policy_loss)
             policy_losses.append(policy_loss.detach().numpy()[0])
             value_losses.append(value_loss.detach().numpy()[0])
             reward_eps.append(reward_ep)
@@ -130,6 +131,7 @@ class Worker(Agent, mp.Process):
 
     def calc_loss(self, states, actions, rewards, done):
         # TODO include entropy?
+        # TODO BUG: policy loss sometimes become NaN, why?
         # initialize R
         if done:
             R = 0
