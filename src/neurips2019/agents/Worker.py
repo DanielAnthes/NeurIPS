@@ -6,7 +6,6 @@ import numpy as np
 import gym
 from neurips2019.agents.Networks import Net # TODO implement better network
 from neurips2019.agents.agent import Agent
-from neurips2019.agents.utils import save_agent
 import torch.multiprocessing as mp
 from neurips2019.agents.utils import share_weights, share_gradients
 from random import random, choice
@@ -47,7 +46,7 @@ class Worker(Agent, mp.Process):
                 action = self.actions[idx]
         return policy, action
 
-    def train(self, Tmax, return_dict, save_interval=10000):
+    def train(self, Tmax, return_dict):
         print(f"{self.name}: Training started")
 
         value_losses = list()
@@ -93,9 +92,6 @@ class Worker(Agent, mp.Process):
                             print(f"Global Counter: {self.a3c_instance.global_counter.value}")
                             print(f"current score: {reward_ep}")
                     state = self.env.reset()
-                    if self.a3c_instance.global_counter.value % save_interval == 0:
-                         save_agent(self.a3c_instance.policynet, f"checkpoint-policy-{self.a3c_instance.global_counter.value}")
-                         save_agent(self.a3c_instance.valuenet, f"checkpoint-value-{self.a3c_instance.global_counter.value}")
                     break
 
             policy_loss, value_loss = self.calc_loss(states, actions, rewards, done)
