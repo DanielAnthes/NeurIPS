@@ -4,21 +4,21 @@ from neurips2019.agents.Networks import Net
 import matplotlib.pyplot as plt
 
 def get_policynet():
-    return Net(4,25,2)
+    return Net(4,10,2)
 
 def get_valuenet():
-    return Net(4,25,1)
+    return Net(4,10,1)
 
 
 ### CONFIG
 num_train_blocks = 1
 block_size = 10000
-num_workers = 16
-lookahead = 100
+num_workers = 8
+lookahead = 10
 
 show_immediate = False # show plots after each training set
 keep_plots = True # show plots after script has finished
-debug = True
+debug = False
 ###
 
 agent = A3CAgent(lookahead, CartpoleFactory(), [0,1], get_policynet, get_valuenet)
@@ -33,10 +33,8 @@ for i in range(num_train_blocks): # train in blocks and save checkpoints
         plt.draw()
         plt.pause(1) # give pyplot time to draw the plots
 
-    if debug:
+    if debug: # your debug statements here
         print("########### DEBUG ############")
-        print("policynet weights")
-        print(agent.policynet.state_dict())
         print("########### \DEBUG ############\n\n")
 
 

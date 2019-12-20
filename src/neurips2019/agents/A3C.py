@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.optim import SGD
+from torch.optim import SGD, RMSprop
 import torch.nn.functional as F
 from torch.multiprocessing import Lock, Value, Process, Manager
 from neurips2019.agents.agent import Agent
@@ -17,8 +17,8 @@ class A3CAgent(Agent):
         self.policynetfunc = policynetfunc # save 'constructors' of network to create workers
         self.valuenetfunc = valuenetfunc
         self.tmax = tmax # maximum lookahead
-        self.policy_optim = SGD(self.policynet.parameters(), lr=0.0001)
-        self.value_optim = SGD(self.valuenet.parameters(), lr=0.0001)
+        self.policy_optim = SGD(self.policynet.parameters(), lr=0.00001, weight_decay=0.9)
+        self.value_optim = SGD(self.valuenet.parameters(), lr=0.00001, weight_decay=0.9)
         self.global_counter = Value('i', 0) # global episode counter
         self.env_factory = env_factory
         self.actions = actions

@@ -104,7 +104,6 @@ class Worker(Agent, mp.Process):
                 R = self._get_value(state) # bootstrap reward from value of last known state
 
             policy_loss, value_loss = self.calc_loss(states, actions, rewards, R)
-            # print(policy_loss)
             policy_losses.append(policy_loss.detach().numpy()[0])
             value_losses.append(value_loss.detach().numpy()[0])
             reward_eps.append(reward_ep)
@@ -137,7 +136,6 @@ class Worker(Agent, mp.Process):
         policy = self.policynet(current_state)
         policy = F.log_softmax(policy)
         policy_action = torch.index_select(policy, dim=0, index=current_action)
-        print(policy_action)
         return policy_action
 
     def calc_loss(self, states, actions, rewards, R):
