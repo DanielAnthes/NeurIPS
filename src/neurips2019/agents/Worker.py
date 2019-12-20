@@ -104,7 +104,7 @@ class Worker(Agent, mp.Process):
                 R = self._get_value(state) # bootstrap reward from value of last known state
 
             policy_loss, value_loss = self.calc_loss(states, actions, rewards, R)
-            # print(value_loss)
+            # print(policy_loss)
             policy_losses.append(policy_loss.detach().numpy()[0])
             value_losses.append(value_loss.detach().numpy()[0])
             reward_eps.append(reward_ep)
@@ -123,26 +123,26 @@ class Worker(Agent, mp.Process):
         return_dict[f"{self.idx}-policyloss"] = policy_losses
         return_dict[f"{self.idx}-valueloss"] = value_losses
         return_dict[f"{self.idx}-reward_ep"] = reward_eps
- 
+
     def _get_value(self, state):
         state = torch.FloatTensor(state)
         value = self.valuenet(state)
         return value
 
-    def _get_policy(self, current_state, current_action):
-        # TODO Softmax applied on policy to avoid negative logarithms in loss, this may not be ideal
+    def _get_log_policy(self, current_state, current_action):
+        # TODO does this return the negative log policy?
+        # returns the log policy of the action taken
         current_state = torch.FloatTensor(current_state)
         current_action = torch.LongTensor([self.actions.index(current_action)]) # convert current_action to tensor
         policy = self.policynet(current_state)
-        # policy = F.softmax(policy, dim=0)
+        policy = F.log_softmax(policy)
         policy_action = torch.index_select(policy, dim=0, index=current_action)
+        print(policy_action)
         return policy_action
 
     def calc_loss(self, states, actions, rewards, R):
         # TODO include entropy?
-        # TODO BUG: policy loss sometimes become NaN, why?
-        # TODO BUG: value loss explodes and then becomes NaN, this probably causes the policy loss bug
-
+        # TODO BUG: policy loss is always 0
         # compute policy value of action in state
         n_steps = len(rewards)
         policy_loss = torch.Tensor([0])
@@ -150,12 +150,12 @@ class Worker(Agent, mp.Process):
         for t in range(n_steps-1,-1,-1): # traverse backwards through time
             R = rewards[t] + self.gamma * R
             # calculate policy value at timestep t
-            policy_t = self._get_policy(states[t], actions[t])
+            log_policy_t = self._get_log_policy(states[t], actions[t])
             # compute value function at timestep t
             value_t = self._get_value(states[t])
-            #policy_loss -= policy_t * (R - value_t)
-            policy_loss += F.log_softmax(policy_t) * (R - value_t)
-            value_loss += (R - value_t)**2
+            advantage = (R - value_t)
+            policy_loss += log_policy_t * advantage
+            value_loss += advantage**2
         return policy_loss, value_loss
 
 

@@ -8,7 +8,7 @@ from neurips2019.agents.Networks import Net
 from neurips2019.agents.Worker import Worker
 import numpy as np
 import matplotlib.pyplot as plt
-from utils import annealing
+from neurips2019.agents.utils import annealing
 
 class A3CAgent(Agent):
     def __init__(self, tmax, env_factory, actions, policynetfunc, valuenetfunc):

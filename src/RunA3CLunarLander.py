@@ -14,7 +14,7 @@ def get_valuenet():
 num_train_blocks = 1
 block_size = 10000
 num_workers = 16
-lookahead = 30
+lookahead = 100
 
 show_immediate = False # show plots after each training set
 keep_plots = True # show plots after script has finished
