@@ -8,6 +8,7 @@ from neurips2019.agents.Networks import Net
 from neurips2019.agents.Worker import Worker
 import numpy as np
 import matplotlib.pyplot as plt
+from utils import annealing
 
 class A3CAgent(Agent):
     def __init__(self, tmax, env_factory, actions, policynetfunc, valuenetfunc):
@@ -34,7 +35,7 @@ class A3CAgent(Agent):
         return_dict["scores"] = list()
         processes = list()
         for i in range(num_processes):
-            worker = Worker(self, self.policynetfunc, self.valuenetfunc, 100, 0.1, self.env_factory, self.actions, i)
+            worker = Worker(self, self.policynetfunc, self.valuenetfunc, 100, annealing, self.env_factory, self.actions, i)
             processes.append(Process(target=worker.train, args=(Tmax,return_dict)))
         for p in processes:
             p.start()

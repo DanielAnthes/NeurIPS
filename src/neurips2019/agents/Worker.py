@@ -14,11 +14,11 @@ from random import random, choice
 
 class Worker(Agent, mp.Process):
 
-    def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, epsilon, env_factory, actions, idx):
+    def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx):
         self.env = env_factory.get_instance()
         self.name = f"worker - {idx}"
         self.idx = idx
-        self.epsilon = epsilon
+        self.epsilon = expl_policy
         self.actions = actions # save possible actions
         self.policynet = policynetfunc()
         self.valuenet = valuenetfunc()
@@ -42,13 +42,16 @@ class Worker(Agent, mp.Process):
             policy = self.policynet(state)
             probs = F.softmax(policy, dim=0).data.numpy()
             idx = np.argmax(probs)
-            if random() < self.epsilon:
+            eps = self.epsilon(self.a3c_instance.global_counter.value)
+            if random() < eps:
                 action = choice(self.actions)
             else:
                 action = self.actions[idx]
         return policy, action
 
     def train(self, Tmax, return_dict):
+        # TODO Bug: agent seems to restart the environment after tmax steps -> should only reset when environment updates done flag
+
         print(f"{self.name}: Training started")
 
         value_losses = list()
@@ -56,7 +59,7 @@ class Worker(Agent, mp.Process):
         reward_eps = list()
 
         state = self.env.reset() # reset environment
-
+        done = False
 
         # repeat until maximum number of episodes is reached
         while self.a3c_instance.global_counter.value < Tmax:

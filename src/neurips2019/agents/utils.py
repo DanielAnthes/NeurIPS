@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 
 '''this file is intended to collect utility functions that are reused and not necessarily specific to any particular algorithm'''
@@ -30,3 +31,5 @@ def load_agent(name):
     filename = name + ".pt"
     return torch.load(filename)
 
+def annealing(episode):
+    return(min(1, 0.1 + np.exp(-0.0005 * episode)))

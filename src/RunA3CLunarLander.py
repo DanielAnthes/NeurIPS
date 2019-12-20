@@ -12,14 +12,16 @@ def get_valuenet():
 
 ### CONFIG
 num_train_blocks = 1
-block_size = 5000
-num_workers = 8
+block_size = 10000
+num_workers = 16
+lookahead = 30
+
 show_immediate = False # show plots after each training set
 keep_plots = True # show plots after script has finished
 debug = True
 ###
 
-agent = A3CAgent(50, CartpoleFactory(), [0,1], get_policynet, get_valuenet)
+agent = A3CAgent(lookahead, CartpoleFactory(), [0,1], get_policynet, get_valuenet)
 
 plt.ion() # show plots in a non blocking way
 for i in range(num_train_blocks): # train in blocks and save checkpoints
