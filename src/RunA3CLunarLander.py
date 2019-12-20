@@ -4,17 +4,17 @@ from neurips2019.agents.Networks import Net
 import matplotlib.pyplot as plt
 
 def get_policynet():
-    return Net(4,10,2)
+    return Net(4,128,128,2)
 
 def get_valuenet():
-    return Net(4,10,1)
+    return Net(4,128,128,1)
 
 
 ### CONFIG
 num_train_blocks = 1
 block_size = 10000
 num_workers = 8
-lookahead = 10
+lookahead = 30
 
 show_immediate = False # show plots after each training set
 keep_plots = True # show plots after script has finished
