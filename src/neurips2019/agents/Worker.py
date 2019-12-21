@@ -51,26 +51,21 @@ class Worker(Agent, mp.Process):
 
     def train(self, Tmax, return_dict):
         # TODO Bug: agent seems to restart the environment after tmax steps -> should only reset when environment updates done flag
-
+        # TODO maybe try only pulling network weights once per episode
         print(f"{self.name}: Training started")
-
         value_losses = list()
         policy_losses = list()
         reward_eps = list()
-
+        reward_ep = 0
         state = self.env.reset() # reset environment
         done = False
 
         # repeat until maximum number of episodes is reached
         while self.a3c_instance.global_counter.value < Tmax:
-            # reset gradients
             policy_loss = torch.Tensor([0])
             value_loss = torch.Tensor([0])
             # self.policy_optim.zero_grad() # workers should not need their own optimizers
             # self.theta_v_optim.zero_grad()
-
-            # remember total episode reward
-            reward_ep = 0
 
             # copy weights from shared net
             share_weights(self.a3c_instance.policynet, self.policynet)
@@ -97,7 +92,10 @@ class Worker(Agent, mp.Process):
                             print(f"Global Counter: {self.a3c_instance.global_counter.value}")
                             print(f"current score: {reward_ep}")
                     state = self.env.reset()
+                    reward_eps.append(reward_ep)
+                    reward_ep = 0
                     break
+
             if done:
                 R = 0
             else:
@@ -106,7 +104,6 @@ class Worker(Agent, mp.Process):
             policy_loss, value_loss = self.calc_loss(states, actions, rewards, R)
             policy_losses.append(policy_loss.detach().numpy()[0])
             value_losses.append(value_loss.detach().numpy()[0])
-            reward_eps.append(reward_ep)
 
             # compute gradients and update shared network
             policy_loss.backward(retain_graph=True) # retain graph as it is needed to backpropagate value_loss as well

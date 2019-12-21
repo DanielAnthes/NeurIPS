@@ -1,19 +1,18 @@
-from neurips2019.environments.LunarLanderFactory import LunarLanderFactory
 from neurips2019.environments.CartpoleFactory import CartpoleFactory
 from neurips2019.agents.A3C import A3CAgent
 from neurips2019.agents.Networks import Net
 import matplotlib.pyplot as plt
 
 def get_policynet():
-    return Net(8,64,64,4)
+    return Net(4,20,20,2)
 
 def get_valuenet():
-    return Net(8,64,64,1)
+    return Net(4,20,20,1)
 
 
 ### CONFIG
 num_train_blocks = 1
-block_size = 10000
+block_size = 1000
 num_workers = 4
 lookahead = 4
 
@@ -22,7 +21,7 @@ keep_plots = True # show plots after script has finished
 debug = False
 ###
 
-agent = A3CAgent(lookahead, LunarLanderFactory(), [0,1,2,3], get_policynet, get_valuenet)
+agent = A3CAgent(lookahead, CartpoleFactory(), [0,1], get_policynet, get_valuenet)
 
 plt.ion() # show plots in a non blocking way
 for i in range(num_train_blocks): # train in blocks and save checkpoints

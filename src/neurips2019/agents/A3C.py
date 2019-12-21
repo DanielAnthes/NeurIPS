@@ -17,8 +17,8 @@ class A3CAgent(Agent):
         self.policynetfunc = policynetfunc # save 'constructors' of network to create workers
         self.valuenetfunc = valuenetfunc
         self.tmax = tmax # maximum lookahead
-        self.policy_optim = SGD(self.policynet.parameters(), lr=0.00001, weight_decay=0.9)
-        self.value_optim = SGD(self.valuenet.parameters(), lr=0.00001, weight_decay=0.9)
+        self.policy_optim = SGD(self.policynet.parameters(), lr=0.0001, weight_decay=0.1)
+        self.value_optim = SGD(self.valuenet.parameters(), lr=0.0001, weight_decay=0.1)
         self.global_counter = Value('i', 0) # global episode counter
         self.env_factory = env_factory
         self.actions = actions
@@ -35,7 +35,7 @@ class A3CAgent(Agent):
         return_dict["scores"] = list()
         processes = list()
         for i in range(num_processes):
-            worker = Worker(self, self.policynetfunc, self.valuenetfunc, 100, annealing, self.env_factory, self.actions, i)
+            worker = Worker(self, self.policynetfunc, self.valuenetfunc, self.tmax, annealing, self.env_factory, self.actions, i)
             processes.append(Process(target=worker.train, args=(Tmax,return_dict)))
         for p in processes:
             p.start()
@@ -62,6 +62,8 @@ class A3CAgent(Agent):
     def update_networks(self):
         self.policy_optim.step()
         self.value_optim.step()
+        self.policy_optim.zero_grad()
+        self.value_optim.zero_grad()
 
     def action(self, state):
         # performs action according to policy
