@@ -13,7 +13,7 @@ class NeuroRandomAgent(Agent):
         self.save_states = save_states
         self.states = []
 
-    def action(self):
+    def action(self, *args, **kwargs):
         return choice(self.actions)
 
     def calc_loss(self):
