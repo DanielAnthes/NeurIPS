@@ -9,8 +9,8 @@ class EnvironmentFactory:
         self.num_instances = Value('i', 0)
 
     @abc.abstractmethod
-    def get_instance(self):
+    def get_instance(self) -> Environment:
         '''
         returns a new instance of an environment
         '''
-        return
+        pass
