@@ -34,13 +34,13 @@ class Worker(Agent, mp.Process):
     def action(self, state):
         # performs action according to policy
         # action is picked with probability proportional to policy values
+        state = torch.FloatTensor(state)
+        policy = self.policynet(state)
         with torch.no_grad(): # only save gradient information when calculating the loss TODO: possible source of screwups
             eps = self.epsilon(self.a3c_instance.global_counter.value)
             if random() < eps:
                 action = choice(self.actions)
             else:
-                state = torch.FloatTensor(state)
-                policy = self.policynet(state)
                 probs = F.softmax(policy, dim=0).data.numpy()
                 idx = np.argmax(probs)
                 action = self.actions[idx]
@@ -83,14 +83,15 @@ class Worker(Agent, mp.Process):
                 reward_ep += reward
 
                 if done: # stop early if we reach a terminal state
+                    state = self.env.reset()
+                    reward_eps.append(reward_ep)
                     # increment global episode counter
                     with self.a3c_instance.global_counter.get_lock():
                         self.a3c_instance.global_counter.value += 1
                         if self.a3c_instance.global_counter.value % 100 == 0 and self.a3c_instance.global_counter.value > 0:
                             print(f"Global Counter: {self.a3c_instance.global_counter.value}")
                             print(f"current score: {reward_ep}")
-                    state = self.env.reset()
-                    reward_eps.append(reward_ep)
+                            print(f"last 100 mean score: {np.mean(reward_eps[-100:])}")
                     reward_ep = 0
                     break
 

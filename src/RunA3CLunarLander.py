@@ -38,9 +38,9 @@ def main(num_train_blocks, block_size, num_workers, lookahead, show_immediate, k
 if __name__ == "__main__":
     main(
         num_train_blocks = 1,
-        block_size = 10000,
-        num_workers = 1,
-        lookahead = 4,
+        block_size = 20000,
+        num_workers = 8,
+        lookahead = 6,
         show_immediate = False, # show plots after each training set
         keep_plots = True, # show plots after script has finished
         debug = False
