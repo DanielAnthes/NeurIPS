@@ -1,14 +1,11 @@
 # https://github.com/ikostrikov/pytorch-a3c/blob/48d95844755e2c3e2c7e48bbd1a7141f7212b63f/train.py#L9 for inspiration
 import torch
 import torch.nn as nn
-from torch.optim import SGD
 import torch.nn.functional as F
 import numpy as np
-import gym
-from neurips2019.agents.Networks import Net # TODO implement better network
 from neurips2019.agents.agent import Agent
 import torch.multiprocessing as mp
-from neurips2019.agents.utils import share_weights, share_gradients
+from neurips2019.util.utils import share_weights, share_gradients
 from random import random, choice
 
 
@@ -37,16 +34,17 @@ class Worker(Agent, mp.Process):
     def action(self, state):
         # performs action according to policy
         # action is picked with probability proportional to policy values
-        state = torch.FloatTensor(state)
         with torch.no_grad(): # only save gradient information when calculating the loss TODO: possible source of screwups
-            policy = self.policynet(state)
-            probs = F.softmax(policy, dim=0).data.numpy()
-            idx = np.argmax(probs)
             eps = self.epsilon(self.a3c_instance.global_counter.value)
             if random() < eps:
                 action = choice(self.actions)
             else:
+                state = torch.FloatTensor(state)
+                policy = self.policynet(state)
+                probs = F.softmax(policy, dim=0).data.numpy()
+                idx = np.argmax(probs)
                 action = self.actions[idx]
+
         return policy, action
 
     def train(self, Tmax, return_dict):
@@ -131,7 +129,7 @@ class Worker(Agent, mp.Process):
         current_state = torch.FloatTensor(current_state)
         current_action = torch.LongTensor([self.actions.index(current_action)]) # convert current_action to tensor
         policy = self.policynet(current_state)
-        policy = F.log_softmax(policy)
+        policy = F.log_softmax(policy, dim=0)
         policy_action = torch.index_select(policy, dim=0, index=current_action)
         return policy_action
 
