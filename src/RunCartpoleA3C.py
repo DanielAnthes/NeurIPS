@@ -1,7 +1,7 @@
 from neurips2019.environments.CartpoleFactory import CartpoleFactory
 from neurips2019.agents.A3C import A3CAgent
 from neurips2019.agents.Networks import Net
-from neurips2019.agents.utils import save_agent
+from neurips2019.util.utils import save_agent
 
 def get_policynet():
     return Net(4,10,2)
