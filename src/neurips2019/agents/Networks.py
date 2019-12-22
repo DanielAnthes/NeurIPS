@@ -1,17 +1,25 @@
-import torch
+from collections import OrderedDict
+
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class Net(nn.Module):
-    def __init__(self, num_in, num_hidden, num_hidden2, num_out):
+    def __init__(self, num_in, hidden, num_out, act_func=nn.ReLU):
         super(Net, self).__init__()
-        self.fc1 = nn.Linear(num_in, num_hidden)
-        self.fc2 = nn.Linear(num_hidden, num_hidden2)
-        self.fc3 = nn.Linear(num_hidden2, num_out)
+        if not type(hidden) == list:
+            hidden = [hidden]
+
+        layers = OrderedDict()
+        layers["Input"] = nn.Linear(num_in, hidden[0])
+        layers["Input_Act"] = act_func()
+
+        if len(hidden) > 1:
+            for idx in range(1, len(hidden)):
+                layers[f"Hidden-{idx}"] = nn.Linear(hidden[idx-1], hidden[idx])
+                layers[f"Hidden-{idx}-Act"] = act_func()
+
+        layers["Out"] = nn.Linear(hidden[-1], num_out)
+        self.net = nn.Sequential(layers)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
+        return self.net.forward(x)
