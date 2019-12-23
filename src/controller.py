@@ -35,18 +35,18 @@ def get_input(screen):
     char = screen.getch()
     if char == ord('q'):
         return KeyCodes.quit
-    elif char == curses.KEY_RIGHT:
+    elif char == ord('d'):
         return KeyCodes.right
-    elif char == curses.KEY_LEFT:
+    elif char == ord('a'):
         return KeyCodes.left
-    elif char == curses.KEY_BACKSPACE:
+    elif char == ord('e'):
         return KeyCodes.reset
     else: # handle all other keys as no action
         return KeyCodes.noact
 
 def connect():
     """Connect to Environment"""
-    return NSenv(ENV_TIMESCALE, ENV_SIZE, ENV_PORT, ENV_IP)
+    return NSenv(timescale=ENV_TIMESCALE, size=ENV_SIZE, ip=ENV_IP, port=ENV_PORT)
 
 def run(env, screen):
     """
@@ -93,7 +93,7 @@ def main():
     # map arrow keys to special values
     screen.keypad(True)
     # Add short info
-    screen.addstr(0,0,"Left / Right Arrow to turn. Lower Arrow for straight. q to quit.\n")
+    screen.addstr(0,0,"A & D to turn. S for straight. Q to quit. E to reset.\n")
     try:
         env = connect()
         result = run(env, screen)
