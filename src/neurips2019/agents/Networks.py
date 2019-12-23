@@ -4,6 +4,9 @@ import torch.nn as nn
 
 
 class Net(nn.Module):
+    """
+    Implements a simple fully connected network with a variable number > 1 of hidden layers
+    """
     def __init__(self, num_in, hidden, num_out, act_func=nn.ReLU):
         super(Net, self).__init__()
         if not type(hidden) == list:
