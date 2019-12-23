@@ -1,6 +1,10 @@
 import numpy as np
 
 def calculate_difference_image(img1, img2, tofloat=True):
+    """
+    calculated and returns the difference image between img1 and img2,
+    where img2 is regarded as the later image time-wise and as such img1 is subtracted from img2
+    """
     diff = img2 - img1
     if len(diff.shape) == 2:
         diff = diff.reshape((diff.shape[0], diff.shape[1], 1))
