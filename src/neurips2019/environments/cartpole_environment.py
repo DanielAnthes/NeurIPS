@@ -6,7 +6,7 @@ from ..environments.environment import Environment
 class CartpoleEnv(Environment):
 
     def __init__(self):
-        self.env = gym.make('CartPole.v1')
+        self.env = gym.make('CartPole-v1')
 
     def step(self, action):
        state, reward, done, _ =  self.env.step(action)

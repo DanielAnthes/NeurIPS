@@ -16,7 +16,7 @@ class Agent(abc.ABC):
         Initialises agent with a given environment which follows the Environment interface.
 
         Use kwargs to use any additional parameters like layer information your agent needs.
-        Use the code below as a guideline.
+        Use the code below as a guideline or call it from your agent with super(YourAgentClass, self).__init__(env)
         """
         self.env = env
         self.actions = env.actionspace
