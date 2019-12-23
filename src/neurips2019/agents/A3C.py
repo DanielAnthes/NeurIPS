@@ -9,21 +9,28 @@ import matplotlib.pyplot as plt
 from neurips2019.util.utils import annealing
 
 
+# This class implements the Agent interface and the Asynchronous Actor Critic (A3C) algorithm described in "Asynchronous Methods for Deep Reinforcement Learning" (Mnih et al)
+# This main agent maintains the shared parameters and creates / manages the worker threads
 class A3CAgent(Agent):
     def __init__(self, tmax, env_factory, actions, policynetfunc, valuenetfunc):
+        # initialize networks
         self.policynet = policynetfunc()
         self.valuenet = valuenetfunc()
         self.policynetfunc = policynetfunc # save 'constructors' of network to create workers
         self.valuenetfunc = valuenetfunc
         self.tmax = tmax # maximum lookahead
+
+        # optimizers
         self.policy_optim = SGD(self.policynet.parameters(), lr=0.001, weight_decay=0.1)
         self.value_optim = SGD(self.valuenet.parameters(), lr=0.001, weight_decay=0.1)
+
         self.global_counter = Value('i', 0) # global episode counter
         self.env_factory = env_factory
         self.actions = actions
         self.lock = Lock()
 
     def train(self, Tmax, num_processes):
+        # main train loop, spawns worker threads
         # reset iteration counter
         with self.global_counter.get_lock():
             self.global_counter.value = 0
@@ -37,11 +44,13 @@ class A3CAgent(Agent):
             worker = Worker(self, self.policynetfunc, self.valuenetfunc, self.tmax, annealing, self.env_factory, self.actions, i)
             processes.append(Process(target=worker.train, args=(Tmax,return_dict)))
 
+        # start worker processes
         for p in processes:
             p.start()
         for p in processes:
             p.join()
 
+        # after training plot statistics
         plt.figure()
         for i in range(num_processes):
             plt.subplot(num_processes,1,i+1)
@@ -60,6 +69,7 @@ class A3CAgent(Agent):
             plt.title(f"worker {i} - scores")
 
     def update_networks(self):
+        # update networks with gradients from worker processes and reset gradients after
         self.policy_optim.step()
         self.value_optim.step()
         self.policy_optim.zero_grad()
@@ -67,19 +77,20 @@ class A3CAgent(Agent):
 
     def action(self, state):
         # performs action according to policy
-        # action is picked with probability proportional to policy values
+        # performs action that has highest policy value for the given state
         state = torch.FloatTensor(state)
         policy = self.policynet(state)
         probs = F.softmax(policy, dim=0).data.numpy()
-        probs /= sum(probs)  # make sure vector sums to 1
-        action = np.random.choice(self.actions, size=None, replace=False, p=probs)
-        return policy, action
+        idx = np.argmax(probs)
+        return policy, self.actions[idx]
 
     def calc_loss(self):
         print("loss should be calculated in the Workers")
         return None
 
     def evaluate(self, num_episodes):
+        # play games in the agents environment, number of games to be played is passed as a parameter
+        # computes mean score and plots results
         env = self.env_factory.get_instance()
         scores = list()
         for _ in range(num_episodes):

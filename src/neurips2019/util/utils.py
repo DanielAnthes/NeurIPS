@@ -14,22 +14,25 @@ def share_gradients(from_net, to_net):
     '''
     copies gradients between networks
     https://discuss.pytorch.org/t/solved-copy-gradient-values/21731
-    TODO if asynchronous updating causes problems implement a lock to avoid simultaneous updates to the shared parameters
+    TODO if asynchronous updating causes problems implement a lock to avoid simultaneous updates to the shared parameters (Note: at the moment this is done by aquiring a lock in the Worker before calling this function)
     '''
     for paramName, paramValue, in from_net.named_parameters():
         for netCopyName, netCopyValue, in to_net.named_parameters():
             if paramName == netCopyName:
-                netCopyValue.grad = paramValue.grad.clone() 
+                netCopyValue.grad = paramValue.grad.clone()
 
 
 def save_agent(agent, name):
+    # wrapper around torch save function
     filename = name + ".pt"
     torch.save(agent, filename)
 
 
 def load_agent(name):
+    # load saved agents
     filename = name + ".pt"
     return torch.load(filename)
 
 def annealing(episode):
+    # specifies the strategy with which the probability of taking a random action changes, returns the current probability of a random action as a function of the number of episodes played
     return(min(1, 0.1 + np.exp(-0.0005 * episode)))
