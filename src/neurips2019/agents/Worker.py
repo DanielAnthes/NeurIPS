@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils import clip_grad_norm_
 import numpy as np
 from neurips2019.agents.agent import Agent
 import torch.multiprocessing as mp
@@ -13,7 +14,7 @@ class Worker(Agent, mp.Process):
 # Instances of this class are created as separate processes to train the "main" a3c agent
 # extends the Agent interface as well as the pyTorch multiprocessing process class
 
-    def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx):
+    def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=1):
         self.env = env_factory.get_instance()
         self.name = f"worker - {idx}"
         self.idx = idx
@@ -22,6 +23,7 @@ class Worker(Agent, mp.Process):
         self.policynet = policynetfunc()
         self.valuenet = valuenetfunc()
         self.NLL = nn.NLLLoss()
+        self.grad_clip = grad_clip
 
         # copy weights from shared net
         share_weights(a3c_instance.policynet, self.policynet)
@@ -48,7 +50,7 @@ class Worker(Agent, mp.Process):
 
         return policy, action
 
-    def train(self, Tmax, return_dict):
+    def train(self, Tmax, return_dict, clip_grads=True):
         # train loop: pulls current shared network, and performs actions in its own environment. Computes the gradients for its own networks and pushes them to the shared network which is then updated. Length of training is determined by a global counter that is incremented by all worker processes
         print(f"{self.name}: Training started")
         value_losses = list()
@@ -107,6 +109,11 @@ class Worker(Agent, mp.Process):
             # compute gradients and update shared network
             policy_loss.backward(retain_graph=True) # retain graph as it is needed to backpropagate value_loss as well
             value_loss.backward(retain_graph=False) # now reset the graph to avoid accumulation over multiple iterations
+
+            # clip gradients
+            if clip_grads:
+                self._clip_gradients()
+
             # make sure agents do not override each others gradients
             # TODO maybe this is not needed
             with self.a3c_instance.lock: # at the moment a lock is acquired before workers update the shared net to avoid overriding gradients. For the agent to be truly 'asynchronous' this lock should be removed
@@ -150,6 +157,9 @@ class Worker(Agent, mp.Process):
             value_loss += advantage**2
         return policy_loss, value_loss
 
-
     def evaluate(self):
         print("Do not evaluate worker instances directly!")
+
+    def _clip_gradients(self):
+        clip_grad_norm_(self.policynet.parameters(),  self.grad_clip)
+        clip_grad_norm_(self.valuenet.parameters(), self.grad_clip)

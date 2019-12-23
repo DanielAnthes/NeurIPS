@@ -3,19 +3,20 @@ from neurips2019.environments.CartpoleFactory import CartpoleFactory
 from neurips2019.agents.A3C import A3CAgent
 from neurips2019.agents.Networks import Net
 import matplotlib.pyplot as plt
+from torch import nn
 
 # define networks for agent
 # wrapper functions for feedforward fully connected network
 def get_policynet():
-    return Net(8, [16, 32, 64], 4)
+    return Net(4, [16, 32, 64], 2)
 
 
 def get_valuenet():
-    return Net(8, [16, 32, 64], 1)
+    return Net(4, [16, 32, 64], 1)
 
 # initializes agent and runs training loop
 def main(num_train_blocks, block_size, num_workers, lookahead, show_immediate, keep_plots, debug=False):
-    agent = A3CAgent(lookahead, LunarLanderFactory(), [0,1,2,3], get_policynet, get_valuenet)
+    agent = A3CAgent(lookahead, CartpoleFactory(), [0,1], get_policynet, get_valuenet)
 
     plt.ion() # show plots in a non blocking way
     for i in range(num_train_blocks): # train in blocks and save checkpoints
@@ -40,9 +41,9 @@ def main(num_train_blocks, block_size, num_workers, lookahead, show_immediate, k
 if __name__ == "__main__":
     main(
         num_train_blocks = 1, # specify how often train() is called on the agent
-        block_size = 20000, # specify how many episodes are played in each call to train()
-        num_workers = 8, # number of worker threads to start
-        lookahead = 6, # number of steps to take before calculating loss
+        block_size = 1000, # specify how many episodes are played in each call to train()
+        num_workers = 4, # number of worker threads to start
+        lookahead = 10, # number of steps to take before calculating loss
         show_immediate = False, # show plots after each training set
         keep_plots = True, # show plots after script has finished
         debug = False # enables debug prints
