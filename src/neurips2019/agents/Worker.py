@@ -10,6 +10,8 @@ from random import random, choice
 
 
 class Worker(Agent, mp.Process):
+# Instances of this class are created as separate processes to train the "main" a3c agent
+# extends the Agent interface as well as the pyTorch multiprocessing process class
 
     def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx):
         self.env = env_factory.get_instance()
@@ -32,8 +34,7 @@ class Worker(Agent, mp.Process):
         self.gamma = 0.99 # discount value
 
     def action(self, state):
-        # performs action according to policy
-        # action is picked with probability proportional to policy values
+        # performs action according to policy, or at random with probability determined by epsilon greedy strategy
         state = torch.FloatTensor(state)
         policy = self.policynet(state)
         with torch.no_grad(): # only save gradient information when calculating the loss TODO: possible source of screwups
@@ -48,8 +49,7 @@ class Worker(Agent, mp.Process):
         return policy, action
 
     def train(self, Tmax, return_dict):
-        # TODO Bug: agent seems to restart the environment after tmax steps -> should only reset when environment updates done flag
-        # TODO maybe try only pulling network weights once per episode
+        # train loop: pulls current shared network, and performs actions in its own environment. Computes the gradients for its own networks and pushes them to the shared network which is then updated. Length of training is determined by a global counter that is incremented by all worker processes
         print(f"{self.name}: Training started")
         value_losses = list()
         policy_losses = list()
@@ -109,7 +109,7 @@ class Worker(Agent, mp.Process):
             value_loss.backward(retain_graph=False) # now reset the graph to avoid accumulation over multiple iterations
             # make sure agents do not override each others gradients
             # TODO maybe this is not needed
-            with self.a3c_instance.lock:
+            with self.a3c_instance.lock: # at the moment a lock is acquired before workers update the shared net to avoid overriding gradients. For the agent to be truly 'asynchronous' this lock should be removed
                 share_gradients(self.valuenet, self.a3c_instance.valuenet)
                 share_gradients(self.policynet, self.a3c_instance.policynet)
                 self.a3c_instance.update_networks()
@@ -125,7 +125,6 @@ class Worker(Agent, mp.Process):
         return value
 
     def _get_log_policy(self, current_state, current_action):
-        # TODO does this return the negative log policy?
         # returns the log policy of the action taken
         current_state = torch.FloatTensor(current_state)
         current_action = torch.LongTensor([self.actions.index(current_action)]) # convert current_action to tensor
@@ -136,7 +135,6 @@ class Worker(Agent, mp.Process):
 
     def calc_loss(self, states, actions, rewards, R):
         # TODO include entropy?
-        # TODO BUG: policy loss is always 0
         # compute policy value of action in state
         n_steps = len(rewards)
         policy_loss = torch.Tensor([0])
