@@ -4,10 +4,9 @@ from typing import List
 State = List[float]
 
 class Environment(abc.ABC):
-
-    @abc.abstractmethod
-    def __init__(self, **kwargs):
-        pass
+    """
+    Implements an abstract Environment implementing all necessary methods the environments should share.
+    """
 
     @abc.abstractmethod
     def step(self, action) -> (State, int, bool):
