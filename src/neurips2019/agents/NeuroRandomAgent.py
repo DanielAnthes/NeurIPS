@@ -6,7 +6,10 @@ from neurips2019.agents.agent import Agent
 
 
 class NeuroRandomAgent(Agent):
-
+    """
+    A random agent acting as baseline
+    """
+    
     def __init__(self, env, save_states = False):
         self.env = env
         self.actions = env.get_actionspace()
