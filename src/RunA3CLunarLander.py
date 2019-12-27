@@ -41,9 +41,9 @@ def main(num_train_blocks, block_size, num_workers, lookahead, show_immediate, k
 if __name__ == "__main__":
     main(
         num_train_blocks = 1, # specify how often train() is called on the agent
-        block_size = 1000, # specify how many episodes are played in each call to train()
-        num_workers = 4, # number of worker threads to start
-        lookahead = 10, # number of steps to take before calculating loss
+        block_size = 10000, # specify how many episodes are played in each call to train()
+        num_workers = 8, # number of worker threads to start
+        lookahead = 6, # number of steps to take before calculating loss
         show_immediate = False, # show plots after each training set
         keep_plots = True, # show plots after script has finished
         debug = False # enables debug prints

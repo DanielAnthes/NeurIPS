@@ -1,4 +1,5 @@
 # https://github.com/ikostrikov/pytorch-a3c/blob/48d95844755e2c3e2c7e48bbd1a7141f7212b63f/train.py#L9 for inspiration
+# https://github.com/muupan/async-rl/blob/master/a3c.py to verify loss
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,7 +15,7 @@ class Worker(Agent, mp.Process):
 # Instances of this class are created as separate processes to train the "main" a3c agent
 # extends the Agent interface as well as the pyTorch multiprocessing process class
 
-    def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=1):
+    def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=10):
         self.env = env_factory.get_instance()
         self.name = f"worker - {idx}"
         self.idx = idx
@@ -153,7 +154,7 @@ class Worker(Agent, mp.Process):
             # compute value function at timestep t
             value_t = self._get_value(states[t])
             advantage = (R - value_t)
-            policy_loss += log_policy_t * advantage
+            policy_loss -= log_policy_t * advantage # TODO -= or +=?
             value_loss += advantage**2
         return policy_loss, value_loss
 

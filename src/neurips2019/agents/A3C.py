@@ -6,7 +6,7 @@ from neurips2019.agents.agent import Agent
 from neurips2019.agents.Worker import Worker
 import numpy as np
 import matplotlib.pyplot as plt
-from neurips2019.util.utils import annealing
+from neurips2019.util.utils import annealing, slow_annealing
 
 
 # This class implements the Agent interface and the Asynchronous Actor Critic (A3C) algorithm described in "Asynchronous Methods for Deep Reinforcement Learning" (Mnih et al)

@@ -35,4 +35,8 @@ def load_agent(name):
 
 def annealing(episode):
     # specifies the strategy with which the probability of taking a random action changes, returns the current probability of a random action as a function of the number of episodes played
-    return(min(1, 0.1 + np.exp(-0.0005 * episode)))
+    return (min(1, 0.1 + np.exp(-0.0005 * episode)))
+
+def slow_annealing(episode):
+    # specifies the strategy with which the probability of taking a random action changes, returns the current probability of a random action as a function of the number of episodes played
+    return (min(1, 0.1 + np.exp(-0.00005 * episode)))
