@@ -8,11 +8,11 @@ from torch import nn
 # define networks for agent
 # wrapper functions for feedforward fully connected network
 def get_policynet():
-    return Net(4, [16, 32, 64], 2)
+    return Net(4, 32, 2)
 
 
 def get_valuenet():
-    return Net(4, [16, 32, 64], 1)
+    return Net(4, 32, 1)
 
 # initializes agent and runs training loop
 def main(num_train_blocks, block_size, num_workers, lookahead, show_immediate, keep_plots, debug=False):
@@ -43,7 +43,7 @@ if __name__ == "__main__":
         num_train_blocks = 1, # specify how often train() is called on the agent
         block_size = 10000, # specify how many episodes are played in each call to train()
         num_workers = 8, # number of worker threads to start
-        lookahead = 6, # number of steps to take before calculating loss
+        lookahead = 30, # number of steps to take before calculating loss
         show_immediate = False, # show plots after each training set
         keep_plots = True, # show plots after script has finished
         debug = False # enables debug prints

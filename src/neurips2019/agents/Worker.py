@@ -15,7 +15,7 @@ class Worker(Agent, mp.Process):
 # Instances of this class are created as separate processes to train the "main" a3c agent
 # extends the Agent interface as well as the pyTorch multiprocessing process class
 
-    def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=10):
+    def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=100):
         self.env = env_factory.get_instance()
         self.name = f"worker - {idx}"
         self.idx = idx
@@ -95,6 +95,7 @@ class Worker(Agent, mp.Process):
                             print(f"Global Counter: {self.a3c_instance.global_counter.value}")
                             print(f"current score: {reward_ep}")
                             print(f"last 100 mean score: {np.mean(reward_eps[-100:])}")
+                            print(f"epsilon: {self.epsilon(self.a3c_instance.global_counter.value)}")
                     reward_ep = 0
                     break
 

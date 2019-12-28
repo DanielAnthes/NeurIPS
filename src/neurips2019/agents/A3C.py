@@ -21,8 +21,8 @@ class A3CAgent(Agent):
         self.tmax = tmax # maximum lookahead
 
         # optimizers
-        self.policy_optim = SGD(self.policynet.parameters(), lr=0.001, weight_decay=0.1)
-        self.value_optim = SGD(self.valuenet.parameters(), lr=0.001, weight_decay=0.1)
+        self.policy_optim = SGD(self.policynet.parameters(), lr=0.001, weight_decay=0.01)
+        self.value_optim = SGD(self.valuenet.parameters(), lr=0.001, weight_decay=0.01)
 
         self.global_counter = Value('i', 0) # global episode counter
         self.env_factory = env_factory
