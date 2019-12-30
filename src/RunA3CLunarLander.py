@@ -30,7 +30,7 @@ def main(num_train_blocks, block_size, num_workers, lookahead, show_immediate, k
 
         if debug: # your debug statements here
             print("########### DEBUG ############")
-            print("########### \DEBUG ############\n\n")
+            print("########### \\DEBUG ############\n\n")
 
     plt.ioff()
     if keep_plots:

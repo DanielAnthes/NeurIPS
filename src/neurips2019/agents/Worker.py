@@ -92,10 +92,11 @@ class Worker(Agent, mp.Process):
                     with self.a3c_instance.global_counter.get_lock():
                         self.a3c_instance.global_counter.value += 1
                         if self.a3c_instance.global_counter.value % 100 == 0 and self.a3c_instance.global_counter.value > 0:
-                            print(f"Global Counter: {self.a3c_instance.global_counter.value}")
-                            print(f"current score: {reward_ep}")
-                            print(f"last 100 mean score: {np.mean(reward_eps[-100:])}")
-                            print(f"epsilon: {self.epsilon(self.a3c_instance.global_counter.value)}")
+                            print(f"{self.name}:")
+                            print(f">> Global Counter: {self.a3c_instance.global_counter.value}")
+                            print(f">> Current score: {reward_ep}")
+                            print(f">> Last 100 mean score: {np.mean(reward_eps[-100:])}")
+                            print(f">> Epsilon: {self.epsilon(self.a3c_instance.global_counter.value)}")
                     reward_ep = 0
                     break
 
