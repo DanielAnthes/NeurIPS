@@ -49,7 +49,7 @@ class Worker(Agent, mp.Process):
 
         return policy, action
 
-    def train(self, Tmax, return_dict, clip_grads=True):
+    def train(self, Tmax, return_dict, clip_grads=True, render=False):
         # train loop: pulls current shared network, and performs actions in its own environment. Computes the gradients for its own networks and pushes them to the shared network which is then updated. Length of training is determined by a global counter that is incremented by all worker processes
         print(f"{self.name}: Training started")
         value_losses = list()
@@ -95,11 +95,11 @@ class Worker(Agent, mp.Process):
                             print(f">> Current score: {reward_ep}")
                             print(f">> Last 100 mean score: {np.mean(reward_eps[-100:])}")
                             print(f">> Epsilon: {self.epsilon(self.a3c_instance.global_counter.value)}")
-                            self.env.render = True # render next episode
+                            self.env.render = render # render next episode
                         else:
                             self.env.close_window() # closes window after episode is finished
                             self.env.render = False
-                            
+ 
                     reward_ep = 0
                     break
 

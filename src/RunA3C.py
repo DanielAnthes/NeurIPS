@@ -76,7 +76,7 @@ def main(config):
     plt.ion() # show plots in a non blocking way
     for i in range(config["train_blocks"]): # train in blocks and save checkpoints
         print(f"Starting Training Block {i}")
-        result_dict = agent.train(config["block_size"], config["num_workers"], show_plots=False)
+        result_dict = agent.train(config["block_size"], config["num_workers"], show_plots=False, render=False)
         agent.evaluate(config["evaluate"])
         path = os.path.join(SAVE_DIR, f"checkpoint-{i}")
         agent.save_model(path)
