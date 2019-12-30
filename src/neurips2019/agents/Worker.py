@@ -97,7 +97,7 @@ class Worker(Agent, mp.Process):
                             print(f">> Epsilon: {self.epsilon(self.a3c_instance.global_counter.value)}")
                             self.env.render = True # render next episode
                         else:
-                            self.env.close_window()
+                            self.env.close_window() # closes window after episode is finished
                             self.env.render = False
                             
                     reward_ep = 0
