@@ -27,6 +27,7 @@ class A3CAgent(Agent):
         self.global_counter = Value('i', 0) # global episode counter
         self.env_factory = config["env"]
         self.actions = config["actions"]
+        self.config = config # save config dict
         self.lock = Lock()
 
     def train(self, Tmax, num_processes):
@@ -41,7 +42,7 @@ class A3CAgent(Agent):
         return_dict["scores"] = list()
         processes = list()
         for i in range(num_processes):
-            worker = Worker(self, self.policynetfunc, self.valuenetfunc, self.tmax, annealing, self.env_factory, self.actions, i)
+            worker = Worker(self, self.policynetfunc, self.valuenetfunc, self.tmax, self.config["epsilon"], self.env_factory, self.actions, i, self.config["grad_clip"], self.config["gamma"])
             processes.append(Process(target=worker.train, args=(Tmax,return_dict)))
 
         # start worker processes

@@ -45,6 +45,8 @@ lunar_conf = {"valuenet": lambda: Net(8, [32,32],1), # function returning a pyto
               "value_decay": 0.01, # weight decay for value optimizer
               "env": LunarLanderFactory(), # environment factory object
               "evaluate": 500, # number of episodes to play for evaluation
+              "grad_clip": 40, # max norm for gradients, used to clip gradients
+              "gamma": 0.99, # discount for future rewards
               "actions": [0,1,2,3]} # actions allowed in the environment
 ###
 
