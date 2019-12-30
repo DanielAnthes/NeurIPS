@@ -15,7 +15,7 @@ class Worker(Agent, mp.Process):
 # Instances of this class are created as separate processes to train the "main" a3c agent
 # extends the Agent interface as well as the pyTorch multiprocessing process class
 
-    def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=100):
+    def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99):
         self.env = env_factory.get_instance()
         self.name = f"worker - {idx}"
         self.idx = idx
@@ -31,10 +31,8 @@ class Worker(Agent, mp.Process):
         share_weights(a3c_instance.valuenet, self.valuenet)
 
         self.tmax = tmax # maximum lookahead
-        # self.policy_optim = SGD(self.policynet.parameters(), lr=0.01) # workers should not need their own optimizers
-        # self.theta_v_optim = SGD(self.valuenet.parameters(), lr=0.01)
         self.a3c_instance = a3c_instance # store reference to main agent
-        self.gamma = 0.99 # discount value
+        self.gamma = gamma # discount value
 
     def action(self, state):
         # performs action according to policy, or at random with probability determined by epsilon greedy strategy
