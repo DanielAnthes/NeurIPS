@@ -7,7 +7,7 @@ class Environment(abc.ABC):
 
     @abc.abstractmethod
     def __init__(self, **kwargs):
-        pass
+        self.render = False
 
     @abc.abstractmethod
     def step(self, action) -> (State, int, bool):
@@ -27,5 +27,12 @@ class Environment(abc.ABC):
     def reset(self) -> State:
         """
         Returns reset state
+        """
+        pass
+
+    @abc.abstractmethod
+    def close_window(self):
+        """
+        close a rendered view of the environment
         """
         pass
