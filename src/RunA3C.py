@@ -7,6 +7,8 @@ from neurips2019.agents.A3C import A3CAgent
 from neurips2019.agents.Networks import Net
 from neurips2019.util.utils import annealing, slow_annealing
 
+
+SAVE_DIR = "logs"
 ########################
 ### CONFIG FOR LUNAR ###
 ########################
@@ -39,6 +41,8 @@ lunar_conf = {
 
 # initializes agent and runs training loop
 def main(config):
+    if not os.path.isdir(SAVE_DIR):
+        os.makedirs(SAVE_DIR)
     agent = A3CAgent(config)
 
     plt.ion() # show plots in a non blocking way
@@ -46,9 +50,9 @@ def main(config):
         print(f"Starting Training Block {i}")
         result_dict = agent.train(config["block_size"], config["num_workers"], show_plots=False)
         agent.evaluate(config["evaluate"])
-        path = os.path.join("logs", f"checkpoint-{i}")
+        path = os.path.join(SAVE_DIR, f"checkpoint-{i}")
         agent.save_model(path)
-        path = os.path.join("logs", f"results_oneblock")
+        path = os.path.join(SAVE_DIR, f"results_oneblock")
         with open(path, "wb") as f:
             pickle.dump(dict(result_dict), f)
         if config["show_immediate"]:
