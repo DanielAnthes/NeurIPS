@@ -94,6 +94,10 @@ class Worker(Agent, mp.Process):
                             print(f"current score: {reward_ep}")
                             print(f"last 100 mean score: {np.mean(reward_eps[-100:])}")
                             print(f"epsilon: {self.epsilon(self.a3c_instance.global_counter.value)}")
+                            self.env.render = True # render next episode
+                        else:
+                            self.env.close_window()
+                            self.env.render = False
                     reward_ep = 0
                     break
 
