@@ -118,11 +118,12 @@ class Worker(Agent, mp.Process):
             # make sure agents do not override each others gradients
             # TODO maybe this is not needed
             with self.a3c_instance.lock: # at the moment a lock is acquired before workers update the shared net to avoid overriding gradients. For the agent to be truly 'asynchronous' this lock should be removed
-                share_gradients(self.valuenet, self.a3c_instance.valuenet)
-                share_gradients(self.policynet, self.a3c_instance.policynet)
-                self.a3c_instance.update_networks()
+                pass
+            share_gradients(self.valuenet, self.a3c_instance.valuenet)
+            share_gradients(self.policynet, self.a3c_instance.policynet)
+            self.a3c_instance.update_networks()
 
-        print(f"storing results to {self.idx}-policyloss and {self.idx}-valueloss")
+        #print(f"storing results to {self.idx}-policyloss and {self.idx}-valueloss")
         return_dict[f"{self.idx}-policyloss"] = policy_losses
         return_dict[f"{self.idx}-valueloss"] = value_losses
         return_dict[f"{self.idx}-reward_ep"] = reward_eps
