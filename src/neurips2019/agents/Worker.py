@@ -15,7 +15,7 @@ class Worker(Agent, mp.Process):
 # Instances of this class are created as separate processes to train the "main" a3c agent
 # extends the Agent interface as well as the pyTorch multiprocessing process class
 
-    def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=100):
+    def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40):
         self.env = env_factory.get_instance()
         self.name = f"worker - {idx}"
         self.idx = idx

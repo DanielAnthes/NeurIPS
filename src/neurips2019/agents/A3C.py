@@ -12,21 +12,21 @@ from neurips2019.util.utils import annealing, slow_annealing
 # This class implements the Agent interface and the Asynchronous Actor Critic (A3C) algorithm described in "Asynchronous Methods for Deep Reinforcement Learning" (Mnih et al)
 # This main agent maintains the shared parameters and creates / manages the worker threads
 class A3CAgent(Agent):
-    def __init__(self, tmax, env_factory, actions, policynetfunc, valuenetfunc):
+    def __init__(self, config):
         # initialize networks
-        self.policynet = policynetfunc()
-        self.valuenet = valuenetfunc()
-        self.policynetfunc = policynetfunc # save 'constructors' of network to create workers
-        self.valuenetfunc = valuenetfunc
-        self.tmax = tmax # maximum lookahead
+        self.policynet = config["policynet"]()
+        self.valuenet = config["valuenet"]()
+        self.policynetfunc = config["policynet"] # save 'constructors' of network to create workers
+        self.valuenetfunc = config["valuenet"]
+        self.tmax = config["lookahead"] # maximum lookahead
 
         # optimizers
-        self.policy_optim = SGD(self.policynet.parameters(), lr=0.001, weight_decay=0.01)
-        self.value_optim = SGD(self.valuenet.parameters(), lr=0.001, weight_decay=0.01)
+        self.policy_optim = SGD(self.policynet.parameters(), lr=config["policy_lr"], weight_decay=config["policy_decay"])
+        self.value_optim = SGD(self.valuenet.parameters(), lr=config["value_lr"], weight_decay=config["value_decay"])
 
         self.global_counter = Value('i', 0) # global episode counter
-        self.env_factory = env_factory
-        self.actions = actions
+        self.env_factory = config["env"]
+        self.actions = config["actions"]
         self.lock = Lock()
 
     def train(self, Tmax, num_processes):
