@@ -30,7 +30,7 @@ class A3CAgent(Agent):
         self.config = config # save config dict
         self.lock = Lock()
 
-    def train(self, Tmax, num_processes):
+    def train(self, Tmax, num_processes, show_plots=True):
         # main train loop, spawns worker threads
         # reset iteration counter
         with self.global_counter.get_lock():
@@ -52,22 +52,25 @@ class A3CAgent(Agent):
             p.join()
 
         # after training plot statistics
-        plt.figure()
-        for i in range(num_processes):
-            plt.subplot(num_processes,1,i+1)
-            pl = return_dict[f"{i}-policyloss"]
-            vl = return_dict[f"{i}-valueloss"]
-            plt.plot(range(len(pl)), pl, color="blue")
-            plt.plot(range(len(vl)), vl, color="orange")
-            plt.legend(["policy loss", "value loss"])
-            plt.title(f"worker {i}")
+        if show_plots:
+            plt.figure()
+            for i in range(num_processes):
+                plt.subplot(num_processes,1,i+1)
+                pl = return_dict[f"{i}-policyloss"]
+                vl = return_dict[f"{i}-valueloss"]
+                plt.plot(range(len(pl)), pl, color="blue")
+                plt.plot(range(len(vl)), vl, color="orange")
+                plt.legend(["policy loss", "value loss"])
+                plt.title(f"worker {i}")
 
-        plt.figure()
-        for i in range(num_processes):
-            plt.subplot(num_processes,1,i+1)
-            scores = return_dict[f"{i}-reward_ep"]
-            plt.plot(range(len(scores)), scores, color="orange")
-            plt.title(f"worker {i} - scores")
+            plt.figure()
+            for i in range(num_processes):
+                plt.subplot(num_processes,1,i+1)
+                scores = return_dict[f"{i}-reward_ep"]
+                plt.plot(range(len(scores)), scores, color="orange")
+                plt.title(f"worker {i} - scores")
+
+        return dict(return_dict)
 
     def update_networks(self):
         # update networks with gradients from worker processes and reset gradients after
@@ -89,7 +92,7 @@ class A3CAgent(Agent):
         print("loss should be calculated in the Workers")
         return None
 
-    def evaluate(self, num_episodes):
+    def evaluate(self, num_episodes, show_plots=True):
         # play games in the agents environment, number of games to be played is passed as a parameter
         # computes mean score and plots results
         env = self.env_factory.get_instance()
@@ -104,14 +107,14 @@ class A3CAgent(Agent):
                 episode_reward += reward
             scores.append(episode_reward)
         # plot results
-        plt.figure()
-        plt.scatter(range(num_episodes), scores)
-        mean_score = np.mean(scores)
-        plt.plot([0, num_episodes-1], [mean_score, mean_score], color='orange')
-        plt.legend(["mean score", "scores"])
+        if show_plots:
+            plt.figure()
+            plt.scatter(range(num_episodes), scores)
+            mean_score = np.mean(scores)
+            plt.plot([0, num_episodes-1], [mean_score, mean_score], color='orange')
+            plt.legend(["mean score", "scores"])
         print(f"mean score: {mean_score}")
         return scores, mean_score
-
 
     def save_model(self, name):
         torch.save(self.policynet.state_dict(), f"{name}-policynet.pt")
@@ -120,4 +123,3 @@ class A3CAgent(Agent):
     def load_model(self, name):
         self.policynet.load_state_dict(torch.load(f"{name}-policynet.pt"))
         self.valuenet.load_state_dict(torch.load(f"{name}-valuenet.pt"))
-

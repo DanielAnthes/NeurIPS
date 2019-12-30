@@ -54,7 +54,7 @@ def main(config):
         agent.save_model(path)
         path = os.path.join(SAVE_DIR, f"results_oneblock")
         with open(path, "wb") as f:
-            pickle.dump(dict(result_dict), f)
+            pickle.dump(result_dict, f)
         if config["show_immediate"]:
             plt.draw()
             plt.pause(1) # give pyplot time to draw the plots
