@@ -32,7 +32,8 @@ class A3CAgent(Agent):
 
         self.weight_log = {"policy" : [], "value" : []}
 
-    def train(self, Tmax, num_processes, show_plots=True):
+
+    def train(self, Tmax, num_processes, show_plots=True, render=False):
         # main train loop, spawns worker threads
         # reset iteration counter
         with self.global_counter.get_lock():
@@ -45,7 +46,7 @@ class A3CAgent(Agent):
         processes = list()
         for i in range(num_processes):
             worker = Worker(self, self.policynetfunc, self.valuenetfunc, self.tmax, self.config["epsilon"], self.env_factory, self.actions, i, self.config["grad_clip"], self.config["gamma"])
-            processes.append(Process(target=worker.train, args=(Tmax,return_dict)))
+            processes.append(Process(target=worker.train, args=(Tmax,return_dict, True, render)))
 
         # start worker processes
         for p in processes:
