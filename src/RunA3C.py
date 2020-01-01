@@ -50,7 +50,7 @@ cartpole_conf = {
     "policynet": policy_net_cp, # function returning a pytorch network to encode state values
     "train_blocks": 1, # how often train is called
     "block_size": 10000, # episodes per call to train
-    "num_workers": 8, # number of worker processes
+    "num_workers": 4, # number of worker processes
     "lookahead": 30, # steps to take before computing losses
     "show_immediate": False, # show plots after each call to train
     "keep_plots": True, # keep plots open after training has finished
@@ -61,7 +61,7 @@ cartpole_conf = {
     "policy_decay": 0.01, # weight decay for policy optimizer
     "value_decay": 0.01, # weight decay for value optimizer
     "env": CartpoleFactory(), # environment factory object
-    "evaluate": 500, # number of episodes to play for evaluation
+    "evaluate": 100, # number of episodes to play for evaluation
     "grad_clip": 40, # max norm for gradients, used to clip gradients
     "gamma": 0.99, # discount for future rewards
     "actions": [0,1] # actions allowed in the environment
@@ -76,7 +76,7 @@ def main(config):
     plt.ion() # show plots in a non blocking way
     for i in range(config["train_blocks"]): # train in blocks and save checkpoints
         print(f"Starting Training Block {i}")
-        result_dict = agent.train(config["block_size"], config["num_workers"], show_plots=False, render=False)
+        result_dict = agent.train(config["block_size"], config["num_workers"], show_plots=True, render=False)
         agent.evaluate(config["evaluate"])
         path = os.path.join(SAVE_DIR, f"checkpoint-{i}")
         agent.save_model(path)

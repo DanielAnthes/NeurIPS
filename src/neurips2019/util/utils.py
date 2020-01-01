@@ -10,7 +10,7 @@ def share_weights(from_net, to_net):
     to_net.load_state_dict(params)
 
 
-def share_gradients(from_net, to_net):
+def share_gradients_old(from_net, to_net):
     '''
     copies gradients between networks
     https://discuss.pytorch.org/t/solved-copy-gradient-values/21731
@@ -21,6 +21,10 @@ def share_gradients(from_net, to_net):
             if paramName == netCopyName:
                 netCopyValue.grad = paramValue.grad.clone()
 
+def share_gradients(from_net, to_net):
+    # TODO call clone() on from parameter?
+    for from_param, to_param in zip(from_net.parameters(), to_net.parameters()):
+        to_param._grad = from_param.grad.clone()
 
 def save_agent(agent, name):
     # wrapper around torch save function

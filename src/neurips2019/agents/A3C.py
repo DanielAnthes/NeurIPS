@@ -92,10 +92,11 @@ class A3CAgent(Agent):
         print("loss should be calculated in the Workers")
         return None
 
-    def evaluate(self, num_episodes, show_plots=True):
+    def evaluate(self, num_episodes, show_plots=True, render=True):
         # play games in the agents environment, number of games to be played is passed as a parameter
         # computes mean score and plots results
         env = self.env_factory.get_instance()
+        env.render = render
         scores = list()
         for _ in range(num_episodes):
             episode_reward = 0
@@ -106,6 +107,7 @@ class A3CAgent(Agent):
                 state, reward, done = env.step(action)
                 episode_reward += reward
             scores.append(episode_reward)
+        env.close_window()
         # plot results
         if show_plots:
             plt.figure()
