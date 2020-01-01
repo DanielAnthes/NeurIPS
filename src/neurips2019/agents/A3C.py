@@ -30,6 +30,9 @@ class A3CAgent(Agent):
         self.config = config # save config dict
         self.lock = Lock()
 
+        self.weight_log = {"policy" : [], "value" : []}
+
+
     def train(self, Tmax, num_processes, show_plots=True, render=False):
         # main train loop, spawns worker threads
         # reset iteration counter
@@ -74,6 +77,8 @@ class A3CAgent(Agent):
 
     def update_networks(self):
         # update networks with gradients from worker processes and reset gradients after
+        self.weight_log["policy"].append([t.detach().numpy() for t in self.policynet.parameters()])
+        self.weight_log["value"].append([t.detach().numpy() for t in self.valuenet.parameters()])
         self.policy_optim.step()
         self.value_optim.step()
         self.policy_optim.zero_grad()

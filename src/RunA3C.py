@@ -20,7 +20,7 @@ lunar_conf = {
     "valuenet": value_net, # function returning a pytorch network to encode policy
     "policynet": policy_net, # function returning a pytorch network to encode state values
     "train_blocks": 1, # how often train is called
-    "block_size": 25000, # episodes per call to train
+    "block_size": 8000, # episodes per call to train
     "num_workers": 16, # number of worker processes
     "lookahead": 30, # steps to take before computing losses
     "show_immediate": False, # show plots after each call to train
@@ -80,9 +80,11 @@ def main(config):
         agent.evaluate(config["evaluate"])
         path = os.path.join(SAVE_DIR, f"checkpoint-{i}")
         agent.save_model(path)
-        path = os.path.join(SAVE_DIR, f"results_oneblock")
+        path = os.path.join(SAVE_DIR, f"results_oneblock_newloss")
         with open(path, "wb") as f:
             pickle.dump(result_dict, f)
+        with open(os.path.join(SAVE_DIR, "weight_log"), "wb") as f:
+            pickle.dump(agent.weight_log, f)
         if config["show_immediate"]:
             plt.draw()
             plt.pause(1) # give pyplot time to draw the plots
