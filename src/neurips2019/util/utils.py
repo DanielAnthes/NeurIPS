@@ -24,7 +24,7 @@ def share_gradients_old(from_net, to_net):
 def share_gradients(from_net, to_net):
     # TODO call clone() on from parameter?
     for from_param, to_param in zip(from_net.parameters(), to_net.parameters()):
-        to_param._grad = from_param.grad.clone()
+        to_param._grad = from_param.grad
 
 def save_agent(agent, name):
     # wrapper around torch save function

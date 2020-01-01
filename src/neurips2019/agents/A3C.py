@@ -16,6 +16,11 @@ class A3CAgent(Agent):
         # initialize networks
         self.policynet = config["policynet"]()
         self.valuenet = config["valuenet"]()
+
+        # move models to shared memory
+        self.policynet.share_memory()
+        self.valuenet.share_memory()
+
         self.policynetfunc = config["policynet"] # save 'constructors' of network to create workers
         self.valuenetfunc = config["valuenet"]
         self.tmax = config["lookahead"] # maximum lookahead
@@ -88,9 +93,10 @@ class A3CAgent(Agent):
         # performs action according to policy
         # performs action that has highest policy value for the given state
         state = torch.FloatTensor(state)
-        policy = self.policynet(state)
-        probs = F.softmax(policy, dim=0).data.numpy()
-        idx = np.argmax(probs)
+        with torch.no_grad():
+            policy = self.policynet(state)
+            probs = F.softmax(policy, dim=0).data.numpy()
+            idx = np.argmax(probs)
         return policy, self.actions[idx]
 
     def calc_loss(self):

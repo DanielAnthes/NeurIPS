@@ -20,7 +20,7 @@ lunar_conf = {
     "valuenet": value_net, # function returning a pytorch network to encode policy
     "policynet": policy_net, # function returning a pytorch network to encode state values
     "train_blocks": 1, # how often train is called
-    "block_size": 8000, # episodes per call to train
+    "block_size": 10000, # episodes per call to train
     "num_workers": 16, # number of worker processes
     "lookahead": 30, # steps to take before computing losses
     "show_immediate": False, # show plots after each call to train
@@ -29,10 +29,10 @@ lunar_conf = {
     "epsilon": annealing, # exploration strategy
     "policy_lr": 0.0001, # learning rate for policy net optimizer
     "value_lr": 0.0001, # learning rate for valuenet optimizer
-    "policy_decay": 0.01, # weight decay for policy optimizer
-    "value_decay": 0.01, # weight decay for value optimizer
+    "policy_decay": 0.0001, # weight decay for policy optimizer
+    "value_decay": 0.0001, # weight decay for value optimizer
     "env": LunarLanderFactory(), # environment factory object
-    "evaluate": 500, # number of episodes to play for evaluation
+    "evaluate": 10, # number of episodes to play for evaluation
     "grad_clip": 40, # max norm for gradients, used to clip gradients
     "gamma": 0.99, # discount for future rewards
     "actions": [0,1,2,3] # actions allowed in the environment
@@ -49,17 +49,17 @@ cartpole_conf = {
     "valuenet": value_net_cp, # function returning a pytorch network to encode policy
     "policynet": policy_net_cp, # function returning a pytorch network to encode state values
     "train_blocks": 1, # how often train is called
-    "block_size": 10000, # episodes per call to train
+    "block_size": 3000, # episodes per call to train
     "num_workers": 4, # number of worker processes
     "lookahead": 30, # steps to take before computing losses
     "show_immediate": False, # show plots after each call to train
     "keep_plots": True, # keep plots open after training has finished
     "debug": False, # additional debug prints
     "epsilon": annealing, # exploration strategy
-    "policy_lr": 0.0001, # learning rate for policy net optimizer
-    "value_lr": 0.0001, # learning rate for valuenet optimizer
-    "policy_decay": 0.01, # weight decay for policy optimizer
-    "value_decay": 0.01, # weight decay for value optimizer
+    "policy_lr": 0.0002, # learning rate for policy net optimizer
+    "value_lr": 0.0002, # learning rate for valuenet optimizer
+    "policy_decay": 0.0001, # weight decay for policy optimizer
+    "value_decay": 0.0001, # weight decay for value optimizer
     "env": CartpoleFactory(), # environment factory object
     "evaluate": 100, # number of episodes to play for evaluation
     "grad_clip": 40, # max norm for gradients, used to clip gradients
@@ -76,7 +76,7 @@ def main(config):
     plt.ion() # show plots in a non blocking way
     for i in range(config["train_blocks"]): # train in blocks and save checkpoints
         print(f"Starting Training Block {i}")
-        result_dict = agent.train(config["block_size"], config["num_workers"], show_plots=True, render=False)
+        result_dict = agent.train(config["block_size"], config["num_workers"], show_plots=True, render=True)
         agent.evaluate(config["evaluate"])
         path = os.path.join(SAVE_DIR, f"checkpoint-{i}")
         agent.save_model(path)
@@ -100,4 +100,4 @@ def main(config):
 
 # if this file is called as the main entry point for the program, call the main function with parameters specified in config
 if __name__ == "__main__":
-    main(cartpole_conf)
+    main(lunar_conf)
