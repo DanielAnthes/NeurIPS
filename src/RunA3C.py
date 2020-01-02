@@ -45,9 +45,6 @@ def main(config):
         log_thread.join()
         raise e
 
-    # write logs to disk
-    logger.write()
-
     plt.ioff()
     if config["keep_plots"]:
         plt.show() # make sure program does not exit so that plots stay open
