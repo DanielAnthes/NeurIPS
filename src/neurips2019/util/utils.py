@@ -22,7 +22,6 @@ def share_gradients_old(from_net, to_net):
                 netCopyValue.grad = paramValue.grad.clone()
 
 def share_gradients(from_net, to_net):
-    # TODO call clone() on from parameter?
     for from_param, to_param in zip(from_net.parameters(), to_net.parameters()):
         to_param._grad = from_param.grad
 

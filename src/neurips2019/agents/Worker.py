@@ -15,7 +15,7 @@ class Worker(Agent, mp.Process):
 # Instances of this class are created as separate processes to train the "main" a3c agent
 # extends the Agent interface as well as the pyTorch multiprocessing process class
 
-    def __init__(self, shared_policy, shared_value, shared_policy_optim, shared_value_optim, global_counter, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99):
+    def __init__(self, logger, shared_policy, shared_value, shared_policy_optim, shared_value_optim, global_counter, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99):
         self.env = env_factory.get_instance()
         self.name = f"worker - {idx}"
         self.idx = idx
@@ -36,6 +36,8 @@ class Worker(Agent, mp.Process):
         # copy weights from shared network
         share_weights(self.shared_policy, self.policynet)
         share_weights(self.shared_value, self.valuenet)
+
+        self.logger = logger
 
 
     def action(self, state):

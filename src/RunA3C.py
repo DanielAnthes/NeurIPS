@@ -61,7 +61,7 @@ cartpole_conf = {
     "policy_decay": 0.0001, # weight decay for policy optimizer
     "value_decay": 0.0001, # weight decay for value optimizer
     "env": CartpoleFactory(), # environment factory object
-    "evaluate": 100, # number of episodes to play for evaluation
+    "evaluate": 10, # number of episodes to play for evaluation
     "grad_clip": 40, # max norm for gradients, used to clip gradients
     "gamma": 0.99, # discount for future rewards
     "actions": [0,1] # actions allowed in the environment
@@ -69,9 +69,8 @@ cartpole_conf = {
 
 # initializes agent and runs training loop
 def main(config):
-    if not os.path.isdir(SAVE_DIR):
-        os.makedirs(SAVE_DIR)
-    agent = A3CAgent(config)
+    logger = Logger(SAVE_DIR)
+    agent = A3CAgent(config, logger)
 
     plt.ion() # show plots in a non blocking way
     for i in range(config["train_blocks"]): # train in blocks and save checkpoints
@@ -93,10 +92,14 @@ def main(config):
             print("########### DEBUG ############")
             print("########### \\DEBUG ############\n\n")
 
+
+    # write logs to disk
+    logger.write()
+
     plt.ioff()
     if config["keep_plots"]:
         plt.show() # make sure program does not exit so that plots stay open
-
+    
 
 # if this file is called as the main entry point for the program, call the main function with parameters specified in config
 if __name__ == "__main__":
