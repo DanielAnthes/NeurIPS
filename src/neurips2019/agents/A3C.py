@@ -39,13 +39,14 @@ class A3CAgent(Agent):
 
         self.logq = log_queue
 
-
-    def train(self, Tmax, num_processes, show_plots=True, render=False):
-        # main train loop, spawns worker threads
         # reset iteration counter
         with self.global_counter.get_lock():
             self.global_counter.value = 0
 
+
+    def train(self, Tmax, num_processes, show_plots=True, render=False):
+        # main train loop, spawns worker threads
+        
         # repeat for training iterations
         manager = Manager()
         return_dict = manager.dict()
