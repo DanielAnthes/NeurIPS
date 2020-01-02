@@ -86,8 +86,6 @@ class A3CAgent(Agent):
     def update_networks(self):
         # NOTE not used at the moment
         # update networks with gradients from worker processes and reset gradients after
-        self.weight_log["policy"].append([t.detach().numpy() for t in self.policynet.parameters()])
-        self.weight_log["value"].append([t.detach().numpy() for t in self.valuenet.parameters()])
         self.policy_optim.step()
         self.value_optim.step()
         self.policy_optim.zero_grad()
