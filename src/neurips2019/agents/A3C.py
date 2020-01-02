@@ -46,7 +46,7 @@ class A3CAgent(Agent):
 
     def train(self, Tmax, num_processes, show_plots=True, render=False):
         # main train loop, spawns worker threads
-        
+
         # repeat for training iterations
         manager = Manager()
         return_dict = manager.dict()
@@ -124,7 +124,7 @@ class A3CAgent(Agent):
             scores.append(episode_reward)
         env.close_window()
 
-        self.logq.put(LogEntry(LogType.HISTOGRAM, f"eval/{time.time}", np.array(scores), 0, {}))
+        self.logq.put(LogEntry(LogType.HISTOGRAM, f"eval/main", np.array(scores), self.global_counter.value, {}))
         mean_score = np.mean(scores)
         print(f"Evaluation mean score: {mean_score}")
         # plot results

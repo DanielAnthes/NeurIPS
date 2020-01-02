@@ -26,7 +26,7 @@ def main(config):
         plt.ion() # show plots in a non blocking way
         for i in range(config["train_blocks"]): # train in blocks and save checkpoints
             print(f"Starting Training Block {i}")
-            result_dict = agent.train(config["block_size"], config["num_workers"], show_plots=False, render=False)
+            result_dict = agent.train(config["block_size"]*(i+1), config["num_workers"], show_plots=False, render=False)
             agent.evaluate(config["evaluate"], render=False, show_plots=False)
             path = os.path.join(SAVE_DIR, f"checkpoint-{i}")
             agent.save_model(path)
@@ -38,6 +38,7 @@ def main(config):
             if config["show_immediate"]:
                 plt.draw()
                 plt.pause(1) # give pyplot time to draw the plots
+
         queue.put(None)
         log_thread.join()
     except KeyboardInterrupt as e:
