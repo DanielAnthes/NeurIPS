@@ -8,6 +8,7 @@ import numpy as np
 from neurips2019.agents.agent import Agent
 import torch.multiprocessing as mp
 from neurips2019.util.utils import share_weights, share_gradients
+from neurips2019.util.Logger import LogEntry, LogType
 from random import random, choice
 
 
@@ -15,7 +16,7 @@ class Worker(Agent, mp.Process):
 # Instances of this class are created as separate processes to train the "main" a3c agent
 # extends the Agent interface as well as the pyTorch multiprocessing process class
 
-    def __init__(self, logger, shared_policy, shared_value, shared_policy_optim, shared_value_optim, global_counter, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99):
+    def __init__(self, logq:mp.Queue, shared_policy, shared_value, shared_policy_optim, shared_value_optim, global_counter, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99):
         self.env = env_factory.get_instance()
         self.name = f"worker - {idx}"
         self.idx = idx
@@ -37,7 +38,7 @@ class Worker(Agent, mp.Process):
         share_weights(self.shared_policy, self.policynet)
         share_weights(self.shared_value, self.valuenet)
 
-        self.logger = logger
+        self.logq = logq
 
 
     def action(self, state):
@@ -90,6 +91,7 @@ class Worker(Agent, mp.Process):
                 reward_ep += reward
 
                 if done: # stop early if we reach a terminal state
+                    self.logq.put(LogEntry(LogType.SCALAR, f"reward/{self.name}", reward_ep, self.global_counter.value, {}))
                     state = self.env.reset()
                     reward_eps.append(reward_ep)
                     # increment global episode counter
@@ -115,8 +117,12 @@ class Worker(Agent, mp.Process):
                 R = self._get_value(state) # bootstrap reward from value of last known state
 
             policy_loss, value_loss = self.calc_loss(states, actions, rewards, R)
-            policy_losses.append(policy_loss.detach().numpy()[0])
-            value_losses.append(value_loss.detach().numpy()[0])
+            pl = policy_loss.detach().numpy()[0]
+            policy_losses.append(pl)
+            vl = value_loss.detach().numpy()[0]
+            value_losses.append(vl)
+            self.logq.put(LogEntry(LogType.SCALAR, f"policy-loss/{self.name}", pl, self.global_counter.value, {}))
+            self.logq.put(LogEntry(LogType.SCALAR, f"value-loss/{self.name}", vl, self.global_counter.value, {}))
 
             # compute gradients and update shared network
             policy_loss.backward(retain_graph=True) # retain graph as it is needed to backpropagate value_loss as well

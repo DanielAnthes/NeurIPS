@@ -7,12 +7,14 @@ from neurips2019.agents.Worker import Worker
 import numpy as np
 import matplotlib.pyplot as plt
 from neurips2019.util.utils import annealing, slow_annealing
+from neurips2019.util.Logger import LogEntry, LogType
+import time
 
 
 # This class implements the Agent interface and the Asynchronous Actor Critic (A3C) algorithm described in "Asynchronous Methods for Deep Reinforcement Learning" (Mnih et al)
 # This main agent maintains the shared parameters and creates / manages the worker threads
 class A3CAgent(Agent):
-    def __init__(self, config, logger):
+    def __init__(self, config, log_queue):
         # initialize networks
         self.policynet = config["policynet"]()
         self.valuenet = config["valuenet"]()
@@ -35,7 +37,7 @@ class A3CAgent(Agent):
         self.config = config # save config dict
         self.lock = Lock()
 
-        self.logger = logger
+        self.logq = log_queue
 
 
     def train(self, Tmax, num_processes, show_plots=True, render=False):
@@ -50,7 +52,7 @@ class A3CAgent(Agent):
         return_dict["scores"] = list()
         processes = list()
         for i in range(num_processes):
-            worker = Worker(self.logger, self.policynet, self.valuenet, self.policy_optim, self.value_optim, self.global_counter, self.policynetfunc, self.valuenetfunc, self.tmax, self.config["epsilon"], self.env_factory, self.actions, i, self.config["grad_clip"], self.config["gamma"])
+            worker = Worker(self.logq, self.policynet, self.valuenet, self.policy_optim, self.value_optim, self.global_counter, self.policynetfunc, self.valuenetfunc, self.tmax, self.config["epsilon"], self.env_factory, self.actions, i, self.config["grad_clip"], self.config["gamma"])
             processes.append(Process(target=worker.train, args=(Tmax,return_dict, True, render)))
 
         # start worker processes
@@ -120,14 +122,17 @@ class A3CAgent(Agent):
                 episode_reward += reward
             scores.append(episode_reward)
         env.close_window()
+
+        self.logq.put(LogEntry(LogType.HISTOGRAM, f"eval/{time.time}", np.array(scores), 0, {}))
+        mean_score = np.mean(scores)
+        print(f"Evaluation mean score: {mean_score}")
         # plot results
         if show_plots:
             plt.figure()
             plt.scatter(range(num_episodes), scores)
-            mean_score = np.mean(scores)
             plt.plot([0, num_episodes-1], [mean_score, mean_score], color='orange')
             plt.legend(["mean score", "scores"])
-        print(f"mean score: {mean_score}")
+        
         return scores, mean_score
 
     def save_model(self, name):
