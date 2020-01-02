@@ -29,6 +29,10 @@ class Logger:
         Constructs a logger that can accept input from several sources and log it into a tensorboard writer
 
         Given a directory where to store the logs and a multiprocessing queue, constructs a tensorboard log wrapper. It takes `LogEntry`s from the queue, the type of tensorboard enrty to generate is encoded in the `type` parameter which should be one of the parameters of the enum `LogType`. The rest of `LogEntry` is passed to the tensorboard function call.
+
+        Args:
+            directory: a string of the path where to log to
+            queue: a multiprocessing Queue to read from
         """
         path = os.path.abspath(directory) # in case working directory changes elsewhere keep logging location
         if not os.path.isdir(path):
