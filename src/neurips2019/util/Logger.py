@@ -1,5 +1,6 @@
 from collections import namedtuple
 from torch.utils.tensorboard import SummaryWriter
+from torch.multiprocessing import Queue
 import os
 import json
 import time
@@ -8,32 +9,42 @@ from enum import Enum
 
 
 class LogType(Enum):
-    DISK=0
+    """For better readbilty defines all types of logging"""
     SCALAR=1
     HISTOGRAM=2
     IMAGE=3
 
-LogEntry = namedtuple('LogEntry', ['type', 'key', 'value', 'idx', 'kwargs'])
+"""Streamline entries put into the logging queue"""
+LogEntry = namedtuple('LogEntry', ['type', 'key', 'value', 'step', 'kwargs'])
 
 class Logger:
     '''
-    Class that manages logging statistics and makes them accessible to Tensorboard,
-    utility for weight logging, saving agents
+    Class that manages logging statistics and makes them accessible to Tensorboard, utility for weight logging, saving agents.
+
+    Implements a run method which should be targeted by a thread / process. Evaluates the multiprocessing queue until None is encountered.
     '''
-    def __init__(self, directory, queue):
+
+    def __init__(self, directory:str, queue:Queue):
+        """
+        Constructs a logger that can accept input from several sources and log it into a tensorboard writer
+
+        Given a directory where to store the logs and a multiprocessing queue, constructs a tensorboard log wrapper. It takes `LogEntry`s from the queue, the type of tensorboard enrty to generate is encoded in the `type` parameter which should be one of the parameters of the enum `LogType`. The rest of `LogEntry` is passed to the tensorboard function call.
+        """
         path = os.path.abspath(directory) # in case working directory changes elsewhere keep logging location
         if not os.path.isdir(path):
             os.makedirs(path)
-        
-        self.disk_log = dict()
-        self.tb_log = dict()
         self.tb_writer = SummaryWriter(path)
         self.directory = path
         self.q = queue
 
     def run(self):
+        """
+        Method to be started by a Thread / Process. Keeps checking the logging queue until None is encountered.
+
+        Always shut logger down by sending None, so writer is properly closed
+        """
+        # maps LogType entries to tensorboard functions
         type_switch = {
-            LogType.DISK : lambda a,b,c,d: None,
             LogType.SCALAR : self.tb_writer.add_scalar,
             LogType.HISTOGRAM : self.tb_writer.add_histogram,
             LogType.IMAGE : self.tb_writer.add_image
@@ -41,33 +52,9 @@ class Logger:
 
         while True:
             entry = self.q.get()
-            if entry is None:
+            if entry is None: # shutdown signal
                 self.tb_writer.close()
                 break
+            # log entry
             func = type_switch[entry.type]
-            func(entry.key, entry.value, global_step=entry.idx, **entry.kwargs)
-
-    def log_tb(self, key, value, idx=None, walltime=None):
-        # log to dict to be written to tensorboard
-        if not key in self.tb_log.keys():
-            self.tb_log[key] = list()
-        self.tb_log[key].append((value, idx, walltime))
-
-    def log_disk(self, key, value, idx=None):
-        # log to dict that will be written to disk
-        if not key in self.disk_log.keys():
-            self.disk_log[key] = list()
-        self.disk_log[key].append((value,idx))
-
-    def write(self):
-        # write logs to tensorboard
-        # with SummaryWriter(log_dir=self.directory) as writer:
-        #     for key, hist in self.tb_log.items():
-        #         for (value, idx, walltime) in hist:
-        #             writer.add_scalar(tag=key, scalar_value=value, global_step=idx, walltime=walltime)
-        # write logs to disk
-        path = os.path.join(self.directory, f"logs_{time.time()}")
-        with open(path, 'w') as file:
-            file.write(json.dumps(self.disk_log))
-
-
+            func(entry.key, entry.value, global_step=entry.step, **entry.kwargs)

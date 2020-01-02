@@ -1,3 +1,9 @@
+"""
+Implements several config dictionaries to be used with A3C.
+
+Use this file to change the configs or create new ones (and if possible link them in `get_config`)
+"""
+
 from neurips2019.environments.LunarLanderFactory import LunarLanderFactory
 from neurips2019.environments.CartpoleFactory import CartpoleFactory
 from neurips2019.agents.Networks import Net
@@ -5,9 +11,10 @@ from neurips2019.util.Logger import Logger
 from neurips2019.util.utils import annealing, slow_annealing
 
 # Shared hyperparameters
-NUM_THREADS = 2
+NUM_THREADS = 16
 
 def get_config(env_name:str):
+    """Convenience function to get config by string."""
     env = env_name.lower()
     if env in ["lunarlander", "lunar lander", "lunar-lander-v2", "lunarlander-v2"]:
         return get_lunar_lander_config()
@@ -58,7 +65,7 @@ def get_cartpole_config():
         "valuenet": value_net_cp, # function returning a pytorch network to encode policy
         "policynet": policy_net_cp, # function returning a pytorch network to encode state values
         "train_blocks": 2, # how often train is called
-        "block_size": 1000, # episodes per call to train
+        "block_size": 2500, # episodes per call to train
         "num_workers": NUM_THREADS, # number of worker processes
         "lookahead": 30, # steps to take before computing losses
         "show_immediate": False, # show plots after each call to train
