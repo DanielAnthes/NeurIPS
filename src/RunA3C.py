@@ -12,7 +12,7 @@ from neurips2019.util.Logger import Logger
 
 from A3C_configs import get_config
 
-SAVE_DIR = "logs"
+SAVE_DIR = os.path.join("logs","A3C")
 
 # initializes agent and runs training loop
 def main(config):
