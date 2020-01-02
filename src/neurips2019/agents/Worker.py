@@ -15,7 +15,7 @@ class Worker(Agent, mp.Process):
 # Instances of this class are created as separate processes to train the "main" a3c agent
 # extends the Agent interface as well as the pyTorch multiprocessing process class
 
-    def __init__(self, a3c_instance, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99):
+    def __init__(self, shared_policy, shared_value, shared_policy_optim, shared_value_optim, global_counter, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99):
         self.env = env_factory.get_instance()
         self.name = f"worker - {idx}"
         self.idx = idx
@@ -25,21 +25,25 @@ class Worker(Agent, mp.Process):
         self.valuenet = valuenetfunc()
         self.NLL = nn.NLLLoss()
         self.grad_clip = grad_clip
-
-        # copy weights from shared net
-        share_weights(a3c_instance.policynet, self.policynet)
-        share_weights(a3c_instance.valuenet, self.valuenet)
-
         self.tmax = tmax # maximum lookahead
-        self.a3c_instance = a3c_instance # store reference to main agent
         self.gamma = gamma # discount value
+        self.shared_policy = shared_policy
+        self.shared_value = shared_value
+        self.global_counter = global_counter
+        self.shared_policy_optim = shared_policy_optim
+        self.shared_value_optim = shared_value_optim
+
+        # copy weights from shared network
+        share_weights(self.shared_policy, self.policynet)
+        share_weights(self.shared_value, self.valuenet)
+
 
     def action(self, state):
         # performs action according to policy, or at random with probability determined by epsilon greedy strategy
         state = torch.FloatTensor(state)
         policy = self.policynet(state)
         with torch.no_grad(): # only save gradient information when calculating the loss TODO: possible source of screwups
-            eps = self.epsilon(self.a3c_instance.global_counter.value)
+            eps = self.epsilon(self.global_counter.value)
             if random() < eps:
                 action = choice(self.actions)
             else:
@@ -60,15 +64,15 @@ class Worker(Agent, mp.Process):
         done = False
 
         # repeat until maximum number of episodes is reached
-        while self.a3c_instance.global_counter.value < Tmax:
+        while self.global_counter.value < Tmax:
             policy_loss = torch.Tensor([0])
             value_loss = torch.Tensor([0])
             # self.policy_optim.zero_grad() # workers should not need their own optimizers
             # self.theta_v_optim.zero_grad()
 
             # copy weights from shared net
-            share_weights(self.a3c_instance.policynet, self.policynet)
-            share_weights(self.a3c_instance.valuenet, self.valuenet)
+            share_weights(self.shared_policy, self.policynet)
+            share_weights(self.shared_value, self.valuenet)
 
             states = list()
             actions = list()
@@ -87,14 +91,14 @@ class Worker(Agent, mp.Process):
                     state = self.env.reset()
                     reward_eps.append(reward_ep)
                     # increment global episode counter
-                    with self.a3c_instance.global_counter.get_lock():
-                        self.a3c_instance.global_counter.value += 1
-                        if self.a3c_instance.global_counter.value % 100 == 0 and self.a3c_instance.global_counter.value > 0:
+                    with self.global_counter.get_lock():
+                        self.global_counter.value += 1
+                        if self.global_counter.value % 100 == 0 and self.global_counter.value > 0:
                             print(f"{self.name}:")
-                            print(f">> Global Counter: {self.a3c_instance.global_counter.value}")
+                            print(f">> Global Counter: {self.global_counter.value}")
                             print(f">> Current score: {reward_ep}")
                             print(f">> Last 100 mean score: {np.mean(reward_eps[-100:])}")
-                            print(f">> Epsilon: {self.epsilon(self.a3c_instance.global_counter.value)}")
+                            print(f">> Epsilon: {self.epsilon(self.global_counter.value)}")
                             self.env.render = render # render next episode
                         else:
                             self.env.close_window() # closes window after episode is finished
@@ -122,11 +126,11 @@ class Worker(Agent, mp.Process):
 
             # make sure agents do not override each others gradients
             # TODO maybe this is not needed
-            with self.a3c_instance.lock: # at the moment a lock is acquired before workers update the shared net to avoid overriding gradients. For the agent to be truly 'asynchronous' this lock should be removed
-                pass
-            share_gradients(self.valuenet, self.a3c_instance.valuenet)
-            share_gradients(self.policynet, self.a3c_instance.policynet)
-            self.a3c_instance.update_networks()
+            #with self.a3c_instance.lock: # at the moment a lock is acquired before workers update the shared net to avoid overriding gradients. For the agent to be truly 'asynchronous' this lock should be removed
+            #   pass
+            share_gradients(self.valuenet, self.shared_value)
+            share_gradients(self.policynet, self.shared_policy)
+            self.update_shared_nets()
 
         #print(f"storing results to {self.idx}-policyloss and {self.idx}-valueloss")
         return_dict[f"{self.idx}-policyloss"] = policy_losses
@@ -170,3 +174,9 @@ class Worker(Agent, mp.Process):
     def _clip_gradients(self):
         clip_grad_norm_(self.policynet.parameters(),  self.grad_clip)
         clip_grad_norm_(self.valuenet.parameters(), self.grad_clip)
+
+    def update_shared_nets(self):
+        self.shared_policy_optim.step()
+        self.shared_value_optim.step()
+        self.shared_policy_optim.zero_grad()
+        self.shared_value_optim.zero_grad()

@@ -50,7 +50,7 @@ class A3CAgent(Agent):
         return_dict["scores"] = list()
         processes = list()
         for i in range(num_processes):
-            worker = Worker(self, self.policynetfunc, self.valuenetfunc, self.tmax, self.config["epsilon"], self.env_factory, self.actions, i, self.config["grad_clip"], self.config["gamma"])
+            worker = Worker(self.policynet, self.valuenet, self.policy_optim, self.value_optim, self.global_counter, self.policynetfunc, self.valuenetfunc, self.tmax, self.config["epsilon"], self.env_factory, self.actions, i, self.config["grad_clip"], self.config["gamma"])
             processes.append(Process(target=worker.train, args=(Tmax,return_dict, True, render)))
 
         # start worker processes
@@ -81,6 +81,7 @@ class A3CAgent(Agent):
         return dict(return_dict)
 
     def update_networks(self):
+        # NOTE not used at the moment
         # update networks with gradients from worker processes and reset gradients after
         self.weight_log["policy"].append([t.detach().numpy() for t in self.policynet.parameters()])
         self.weight_log["value"].append([t.detach().numpy() for t in self.valuenet.parameters()])

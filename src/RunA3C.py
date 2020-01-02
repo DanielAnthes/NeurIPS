@@ -20,13 +20,13 @@ lunar_conf = {
     "valuenet": value_net, # function returning a pytorch network to encode policy
     "policynet": policy_net, # function returning a pytorch network to encode state values
     "train_blocks": 1, # how often train is called
-    "block_size": 10000, # episodes per call to train
-    "num_workers": 16, # number of worker processes
+    "block_size": 20000, # episodes per call to train
+    "num_workers": 4, # number of worker processes
     "lookahead": 30, # steps to take before computing losses
     "show_immediate": False, # show plots after each call to train
     "keep_plots": True, # keep plots open after training has finished
     "debug": False, # additional debug prints
-    "epsilon": annealing, # exploration strategy
+    "epsilon": slow_annealing, # exploration strategy
     "policy_lr": 0.0001, # learning rate for policy net optimizer
     "value_lr": 0.0001, # learning rate for valuenet optimizer
     "policy_decay": 0.0001, # weight decay for policy optimizer
@@ -76,7 +76,7 @@ def main(config):
     plt.ion() # show plots in a non blocking way
     for i in range(config["train_blocks"]): # train in blocks and save checkpoints
         print(f"Starting Training Block {i}")
-        result_dict = agent.train(config["block_size"], config["num_workers"], show_plots=True, render=True)
+        result_dict = agent.train(config["block_size"], config["num_workers"], show_plots=True, render=False)
         agent.evaluate(config["evaluate"])
         path = os.path.join(SAVE_DIR, f"checkpoint-{i}")
         agent.save_model(path)
@@ -100,4 +100,4 @@ def main(config):
 
 # if this file is called as the main entry point for the program, call the main function with parameters specified in config
 if __name__ == "__main__":
-    main(lunar_conf)
+    main(cartpole_conf)
