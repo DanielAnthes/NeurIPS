@@ -120,13 +120,15 @@ class Worker(Agent, mp.Process):
             else:
                 R = self._get_value(state) # bootstrap reward from value of last known state
 
-            policy_loss, value_loss = self.calc_loss(states, actions, rewards, R)
+            policy_loss, value_loss, entropy = self.calc_loss(states, actions, rewards, R)
             pl = policy_loss.detach().numpy()[0]
             policy_losses.append(pl)
             vl = value_loss.detach().numpy()[0]
+            e = entropy.detach().numpy()[0]
             value_losses.append(vl)
             self.logq.put(LogEntry(LogType.SCALAR, f"policy-loss/{self.name}", pl, self.global_counter.value, {}))
             self.logq.put(LogEntry(LogType.SCALAR, f"value-loss/{self.name}", vl, self.global_counter.value, {}))
+            self.logq.put(LogEntry(LogType.SCALAR, f"entropy/{self.name}", e, self.global_counter.value, {}))
 
             # compute gradients and update shared network
             policy_loss.backward(retain_graph=True) # retain graph as it is needed to backpropagate value_loss as well
@@ -186,6 +188,7 @@ class Worker(Agent, mp.Process):
         n_steps = len(rewards)
         policy_loss = torch.Tensor([0])
         value_loss = torch.Tensor([0])
+        entropy = torch.Tensor([0])
         for t in range(n_steps-1,-1,-1): # traverse backwards through time
             R = rewards[t] + self.gamma * R
             # calculate policy value at timestep t
@@ -194,12 +197,12 @@ class Worker(Agent, mp.Process):
             value_t = self._get_value(states[t])
             advantage = (R - value_t)
             policy_loss -= log_policy_t * advantage # TODO -= or +=?
-            if entropy:
-                entropy = self._get_entropy(states[t])
-                policy_loss += entropy
+            entropy += self._get_entropy(states[t])
             value_loss += advantage**2
+        if entropy:
+            policy_loss += entropy * 10 # TODO -=?, TODO weight entropy differently?
         policy_loss = policy_loss ** 2 # non-negative only
-        return policy_loss, value_loss
+        return policy_loss, value_loss, entropy
 
     def evaluate(self):
         print("Do not evaluate worker instances directly!")
