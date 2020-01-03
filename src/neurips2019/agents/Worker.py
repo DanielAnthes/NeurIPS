@@ -163,7 +163,24 @@ class Worker(Agent, mp.Process):
         policy_action = torch.index_select(policy, dim=0, index=current_action)
         return policy_action
 
-    def calc_loss(self, states, actions, rewards, R):
+    def _get_entropy(self, current_state):
+        """ compute entropy of policy at current state
+
+        Args:
+            current_state: the current state of the environment
+
+        Returns:
+            entropy: entropy value of the current state
+        """
+        # TODO technically entropy should use log base 2
+        current_state = torch.FloatTensor(current_state)
+        logit_policy = self.policynet(current_state)
+        policy = F.softmax(logit_policy, dim=0)
+        log_policy = F.log_softmax(logit_policy, dim=0)
+        entropy = torch.dot(policy, log_policy)
+        return entropy
+
+    def calc_loss(self, states, actions, rewards, R, entropy=True):
         # TODO include entropy?
         # compute policy value of action in state
         n_steps = len(rewards)
@@ -177,6 +194,9 @@ class Worker(Agent, mp.Process):
             value_t = self._get_value(states[t])
             advantage = (R - value_t)
             policy_loss -= log_policy_t * advantage # TODO -= or +=?
+            if entropy:
+                entropy = self._get_entropy(states[t])
+                policy_loss += entropy
             value_loss += advantage**2
         policy_loss = policy_loss ** 2 # non-negative only
         return policy_loss, value_loss
