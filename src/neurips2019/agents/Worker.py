@@ -177,7 +177,7 @@ class Worker(Agent, mp.Process):
         logit_policy = self.policynet(current_state)
         policy = F.softmax(logit_policy, dim=0)
         log_policy = F.log_softmax(logit_policy, dim=0)
-        entropy = torch.dot(policy, log_policy)
+        entropy = -torch.dot(policy, log_policy)
         return entropy
 
     def calc_loss(self, states, actions, rewards, R, entropy=True):
