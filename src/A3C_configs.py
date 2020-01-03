@@ -48,8 +48,10 @@ def get_lunar_lander_config():
         "evaluate": 10, # number of episodes to play for evaluation
         "grad_clip": 40, # max norm for gradients, used to clip gradients
         "gamma": 0.99, # discount for future rewards
-        "actions": [0,1,2,3] # actions allowed in the environment
-    }
+        "actions": [0,1,2,3], # actions allowed in the environment
+         "entropy": True, # minimize entropy as part of loss function
+        "entropy_weight": 10 # weight of entropy in loss function
+   }
 
     return lunar_conf
 
@@ -80,7 +82,9 @@ def get_cartpole_config():
         "evaluate": 10, # number of episodes to play for evaluation
         "grad_clip": 40, # max norm for gradients, used to clip gradients
         "gamma": 0.99, # discount for future rewards
-        "actions": [0,1] # actions allowed in the environment
+        "actions": [0,1], # actions allowed in the environment
+        "entropy": True, # minimize entropy as part of loss function
+        "entropy_weight": 10 # weight of entropy in loss function
     }
 
     return cartpole_conf

@@ -18,7 +18,7 @@ class Worker(Agent, mp.Process):
 # Instances of this class are created as separate processes to train the "main" a3c agent
 # extends the Agent interface as well as the pyTorch multiprocessing process class
 
-    def __init__(self, logq:mp.Queue, shared_policy, shared_value, shared_policy_optim, shared_value_optim, global_counter, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99):
+    def __init__(self, entropy, entropy_weight, logq:mp.Queue, shared_policy, shared_value, shared_policy_optim, shared_value_optim, global_counter, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99):
         self.env = env_factory.get_instance()
         self.name = f"worker-{idx:02d}"
         self.idx = idx
@@ -35,6 +35,8 @@ class Worker(Agent, mp.Process):
         self.global_counter = global_counter
         self.shared_policy_optim = shared_policy_optim
         self.shared_value_optim = shared_value_optim
+        self.entropy = entropy
+        self.entropy_weight = entropy_weight
 
         # copy weights from shared network
         share_weights(self.shared_policy, self.policynet)
@@ -182,7 +184,7 @@ class Worker(Agent, mp.Process):
         entropy = -torch.dot(policy, log_policy)
         return entropy
 
-    def calc_loss(self, states, actions, rewards, R, entropy=True):
+    def calc_loss(self, states, actions, rewards, R):
         # TODO include entropy?
         # compute policy value of action in state
         n_steps = len(rewards)
@@ -199,8 +201,8 @@ class Worker(Agent, mp.Process):
             policy_loss -= log_policy_t * advantage # TODO -= or +=?
             entropy += self._get_entropy(states[t])
             value_loss += advantage**2
-        if entropy:
-            policy_loss += entropy * 10 # TODO -=?, TODO weight entropy differently?
+        if self.entropy:
+            policy_loss += entropy * self.entropy_weight
         policy_loss = policy_loss ** 2 # non-negative only
         return policy_loss, value_loss, entropy
 
