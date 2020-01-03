@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 from torch.multiprocessing import Queue
 from threading import Thread
+
 from neurips2019.environments.LunarLanderFactory import LunarLanderFactory
 from neurips2019.environments.CartpoleFactory import CartpoleFactory
 from neurips2019.agents.A3C import A3CAgent
@@ -12,36 +13,46 @@ from neurips2019.util.Logger import Logger
 
 from A3C_configs import get_config
 
+# where to save logs
 SAVE_DIR = os.path.join("logs","A3C")
 
 # initializes agent and runs training loop
 def main(config):
+    """Trains and evaluates an A3C agent according to config"""
+    # set up logger with multiprocessing queue
     queue = Queue()
     logger = Logger(SAVE_DIR, queue)
+    # the main instance to run off
     agent = A3CAgent(config, queue)
 
+    # create logging thread
     log_thread = Thread(target=logger.run, name="logger")
     try:
+        # start
         log_thread.start()
         plt.ion() # show plots in a non blocking way
+
         for i in range(config["train_blocks"]): # train in blocks and save checkpoints
             print(f"Starting Training Block {i}")
+            # training process
             result_dict = agent.train(config["block_size"]*(i+1), config["num_workers"], show_plots=False, render=False)
-            agent.evaluate(config["evaluate"], render=True, show_plots=False)
+            # evaluation
+            agent.evaluate(config["evaluate"], render=False, show_plots=False)
+
+            # save checkpoint
             path = os.path.join(SAVE_DIR, f"checkpoint-{i}")
             agent.save_model(path)
-            # path = os.path.join(SAVE_DIR, f"results_oneblock_newloss")
-            # with open(path, "wb") as f:
-            #     pickle.dump(result_dict, f)
-            # with open(os.path.join(SAVE_DIR, "weight_log"), "wb") as f:
-            #     pickle.dump(agent.weight_log, f)
+
+            # show plots of block
             if config["show_immediate"]:
                 plt.draw()
                 plt.pause(1) # give pyplot time to draw the plots
 
+        # stop and close logger
         queue.put(None)
         log_thread.join()
     except KeyboardInterrupt as e:
+        # if interrupt collect thread first
         queue.put(None)
         log_thread.join()
         raise e

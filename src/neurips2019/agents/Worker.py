@@ -7,9 +7,11 @@ from torch.nn.utils import clip_grad_norm_
 import numpy as np
 from neurips2019.agents.agent import Agent
 import torch.multiprocessing as mp
+from torch.utils.tensorboard import SummaryWriter
 from neurips2019.util.utils import share_weights, share_gradients
 from neurips2019.util.Logger import LogEntry, LogType
 from random import random, choice
+import os
 
 
 class Worker(Agent, mp.Process):
@@ -18,7 +20,7 @@ class Worker(Agent, mp.Process):
 
     def __init__(self, logq:mp.Queue, shared_policy, shared_value, shared_policy_optim, shared_value_optim, global_counter, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99):
         self.env = env_factory.get_instance()
-        self.name = f"worker - {idx}"
+        self.name = f"worker-{idx:02d}"
         self.idx = idx
         self.epsilon = expl_policy
         self.actions = actions # save possible actions
@@ -176,6 +178,7 @@ class Worker(Agent, mp.Process):
             advantage = (R - value_t)
             policy_loss -= log_policy_t * advantage # TODO -= or +=?
             value_loss += advantage**2
+        policy_loss = policy_loss ** 2 # non-negative only
         return policy_loss, value_loss
 
     def evaluate(self):
