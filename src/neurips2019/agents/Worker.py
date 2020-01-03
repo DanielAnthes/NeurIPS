@@ -51,8 +51,10 @@ class Worker(Agent, mp.Process):
                 action = choice(self.actions)
             else:
                 probs = F.softmax(policy, dim=0).data.numpy()
-                idx = np.argmax(probs)
-                action = self.actions[idx]
+                probs /= sum(probs) # ensure probs sum to 1
+                # idx = np.argmax(probs)
+                action = np.random.choice(self.actions, size=None, replace=False, p=probs) # choose action with probability according to policy
+                # action = self.actions[idx]
 
         return policy, action
 
@@ -107,7 +109,7 @@ class Worker(Agent, mp.Process):
                         else:
                             self.env.close_window() # closes window after episode is finished
                             self.env.render = False
- 
+
                     reward_ep = 0
                     break
 

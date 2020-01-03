@@ -27,7 +27,7 @@ def main(config):
         for i in range(config["train_blocks"]): # train in blocks and save checkpoints
             print(f"Starting Training Block {i}")
             result_dict = agent.train(config["block_size"]*(i+1), config["num_workers"], show_plots=False, render=False)
-            agent.evaluate(config["evaluate"], render=False, show_plots=False)
+            agent.evaluate(config["evaluate"], render=True, show_plots=False)
             path = os.path.join(SAVE_DIR, f"checkpoint-{i}")
             agent.save_model(path)
             # path = os.path.join(SAVE_DIR, f"results_oneblock_newloss")
@@ -49,7 +49,7 @@ def main(config):
     plt.ioff()
     if config["keep_plots"]:
         plt.show() # make sure program does not exit so that plots stay open
-    
+
 
 # if this file is called as the main entry point for the program, call the main function with parameters specified in config
 if __name__ == "__main__":

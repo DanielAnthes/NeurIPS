@@ -11,7 +11,7 @@ from neurips2019.util.Logger import Logger
 from neurips2019.util.utils import annealing, slow_annealing
 
 # Shared hyperparameters
-NUM_THREADS = 16
+NUM_THREADS = 4
 
 def get_config(env_name:str):
     """Convenience function to get config by string."""
@@ -64,7 +64,7 @@ def get_cartpole_config():
     cartpole_conf = {
         "valuenet": value_net_cp, # function returning a pytorch network to encode policy
         "policynet": policy_net_cp, # function returning a pytorch network to encode state values
-        "train_blocks": 2, # how often train is called
+        "train_blocks": 1, # how often train is called
         "block_size": 2500, # episodes per call to train
         "num_workers": NUM_THREADS, # number of worker processes
         "lookahead": 30, # steps to take before computing losses
