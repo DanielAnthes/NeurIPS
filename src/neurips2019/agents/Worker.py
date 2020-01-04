@@ -131,6 +131,7 @@ class Worker(Agent, mp.Process):
             self.logq.put(LogEntry(LogType.SCALAR, f"policy-loss/{self.name}", pl, self.global_counter.value, {}))
             self.logq.put(LogEntry(LogType.SCALAR, f"value-loss/{self.name}", vl, self.global_counter.value, {}))
             self.logq.put(LogEntry(LogType.SCALAR, f"entropy/{self.name}", e, self.global_counter.value, {}))
+            self.logq.put(LogEntry(LogType.SCALAR, f"epsilon", self.epsilon(self.global_counter.value), self.global_counter.value, {}))
 
             # compute gradients and update shared network
             policy_loss.backward(retain_graph=True) # retain graph as it is needed to backpropagate value_loss as well

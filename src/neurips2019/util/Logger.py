@@ -33,6 +33,7 @@ class Logger:
         Args:
             directory: a string of the path where to log to
             queue: a multiprocessing Queue to read from
+            config: a configuration file for the agent that is being logged
         """
         path = os.path.abspath(directory) # in case working directory changes elsewhere keep logging location
         if not os.path.isdir(path):

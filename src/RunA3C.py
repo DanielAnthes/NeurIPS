@@ -14,12 +14,12 @@ from neurips2019.util.Logger import Logger
 from A3C_configs import get_config
 
 # where to save logs
-SAVE_DIR = os.path.join("logs","A3C")
-
+SAVE_DIR = os.path.join("logs","A3C","cartpole_1")
 # initializes agent and runs training loop
 def main(config):
     """Trains and evaluates an A3C agent according to config"""
     # set up logger with multiprocessing queue
+    print(f"Saving logs to: {SAVE_DIR}")
     queue = Queue()
     logger = Logger(SAVE_DIR, queue)
     # the main instance to run off
