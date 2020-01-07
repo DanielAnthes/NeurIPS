@@ -4,7 +4,10 @@ from typing import List
 State = List[float]
 
 class Environment(abc.ABC):
-
+    """
+    Implements an abstract Environment implementing all necessary methods the environments should share.
+    """
+  
     @abc.abstractmethod
     def __init__(self, **kwargs):
         self.render = False

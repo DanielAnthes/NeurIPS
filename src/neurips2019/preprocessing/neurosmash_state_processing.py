@@ -7,7 +7,14 @@ STATES_SAVEDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'state
 
 
 def state_to_screen(state, size=None, outsize=580, tofloat=True, norm=False, gray=False):
-
+    """
+    Takes the state representation returned from the Neurosmash envrionment and forms it into
+    a square image only containing the rotated platform.
+    
+    If tofloat is true output will be in [0,1] otherwise in [0,255] with results being integers.
+    If norm is true, image will be normalised before returning resulting in a gray background and colored agents.
+    If gray is true, image will be turned into grayscale before returning.
+    """
     if not size:
         size = np.int(np.sqrt(len(state)/3))
 
@@ -58,6 +65,9 @@ def state_to_screen(state, size=None, outsize=580, tofloat=True, norm=False, gra
 
 
 def normalize(picture, newmin=0, newmax=255):
+    """
+    Normalizes an image
+    """
     #     dst = np.zeros(picture.shape)
     #     return cv2.normalize(picture, dst=dst, alpha=newmin, beta=newmax, norm_type=cv2.NORM_INF)
     if len(picture.shape) == 2:
@@ -73,6 +83,9 @@ def normalize(picture, newmin=0, newmax=255):
 
 
 def rgb2gray(img):
+    """
+    Reutrns a grayscale version of the image with a focus on boosting the first and thirds channel (usually red & blue)
+    """
     dtype = img.dtype
     img = img.astype(np.float64)
     img[:, :, 0] *= 0.4  # 0.2989
@@ -82,10 +95,16 @@ def rgb2gray(img):
 
 
 def _scale_to_int(num, nsize, ref):
+    """
+    Scales a number according to a scale and reference value
+    """
     return int(num * (nsize / ref) + 0.5)
 
 
 def save_states(states, agent_name, savedir=STATES_SAVEDIR):
+    """
+    Saves states to a a given directory
+    """
     print(savedir)
     states = np.array(states, dtype=np.int8)
     filename = f"states_{agent_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.npy"
