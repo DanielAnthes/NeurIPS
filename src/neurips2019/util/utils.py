@@ -10,7 +10,7 @@ def share_weights(from_net, to_net):
     to_net.load_state_dict(params)
 
 
-def share_gradients(from_net, to_net):
+def share_gradients_old(from_net, to_net):
     '''
     copies gradients between networks
     https://discuss.pytorch.org/t/solved-copy-gradient-values/21731
@@ -21,6 +21,9 @@ def share_gradients(from_net, to_net):
             if paramName == netCopyName:
                 netCopyValue.grad = paramValue.grad.clone()
 
+def share_gradients(from_net, to_net):
+    for from_param, to_param in zip(from_net.parameters(), to_net.parameters()):
+        to_param._grad = from_param.grad
 
 def save_agent(agent, name):
     # wrapper around torch save function
@@ -35,4 +38,8 @@ def load_agent(name):
 
 def annealing(episode):
     # specifies the strategy with which the probability of taking a random action changes, returns the current probability of a random action as a function of the number of episodes played
-    return(min(1, 0.1 + np.exp(-0.0005 * episode)))
+    return (min(1, 0.1 + np.exp(-0.0005 * episode)))
+
+def slow_annealing(episode):
+    # specifies the strategy with which the probability of taking a random action changes, returns the current probability of a random action as a function of the number of episodes played
+    return (min(1, 0.1 + np.exp(-0.00005 * episode)))
