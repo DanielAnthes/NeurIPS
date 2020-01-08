@@ -152,8 +152,9 @@ class A3CAgent(Agent):
             policy: policy values for all actions in this state
             action: best action to be performed in this state according to current policy
         """
-        state = torch.FloatTensor(state)
+        state = torch.FloatTensor(state).unsqueeze(dim=0)
         with torch.no_grad():
+            representation = self.covnet(state).squeeze(dim=0)
             policy = self.policynet(state)
             probs = F.softmax(policy, dim=0).data.numpy()
             idx = np.argmax(probs)
@@ -185,10 +186,10 @@ class A3CAgent(Agent):
         for _ in range(num_episodes):
             episode_reward = 0
             done = False
-            state = env.reset()
+            state = env.reset(image=True)
             while not done:
                 _, action = self.action(state)
-                state, reward, done = env.step(action)
+                state, reward, done = env.step(action, image=True)
                 episode_reward += reward
             scores.append(episode_reward)
         env.close_window()
