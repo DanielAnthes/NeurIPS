@@ -18,7 +18,7 @@ class Worker(Agent, mp.Process):
 # Instances of this class are created as separate processes to train the "main" a3c agent
 # extends the Agent interface as well as the pyTorch multiprocessing process class
 
-    def __init__(self, entropy, entropy_weight, logq:mp.Queue, shared_policy, shared_value, shared_policy_optim, shared_value_optim, global_counter, policynetfunc, valuenetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99):
+    def __init__(self, entropy, entropy_weight, logq:mp.Queue, shared_policy, shared_value, shared_conv, shared_policy_optim, shared_value_optim, shared_conv_optim, global_counter, policynetfunc, valuenetfunc, convnetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99):
         self.env = env_factory.get_instance()
         self.name = f"worker-{idx:02d}"
         self.idx = idx
@@ -26,29 +26,34 @@ class Worker(Agent, mp.Process):
         self.actions = actions # save possible actions
         self.policynet = policynetfunc()
         self.valuenet = valuenetfunc()
+        self.convnet = convnetfunc()
         self.NLL = nn.NLLLoss()
         self.grad_clip = grad_clip
         self.tmax = tmax # maximum lookahead
         self.gamma = gamma # discount value
         self.shared_policy = shared_policy
         self.shared_value = shared_value
+        self.shared_conv = shared_conv
         self.global_counter = global_counter
         self.shared_policy_optim = shared_policy_optim
         self.shared_value_optim = shared_value_optim
+        self.shared_conv_optim = shared_conv_optim
         self.entropy = entropy
         self.entropy_weight = entropy_weight
 
         # copy weights from shared network
         share_weights(self.shared_policy, self.policynet)
         share_weights(self.shared_value, self.valuenet)
+        share_weights(self.shared_conv, self.convnet)
 
         self.logq = logq
 
 
     def action(self, state):
         # performs action according to policy, or at random with probability determined by epsilon greedy strategy
-        state = torch.FloatTensor(state)
-        policy = self.policynet(state)
+        state = torch.FloatTensor(state).unsqueeze(dim=0)
+        representation = self.convnet(state).squeeze(dim=0)
+        policy = self.policynet(representation)
         with torch.no_grad(): # only save gradient information when calculating the loss TODO: possible source of screwups
             eps = self.epsilon(self.global_counter.value)
             if random() < eps:
@@ -69,7 +74,7 @@ class Worker(Agent, mp.Process):
         policy_losses = list()
         reward_eps = list()
         reward_ep = 0
-        state = self.env.reset() # reset environment
+        state = self.env.reset(image=True) # reset environment
         done = False
 
         # repeat until maximum number of episodes is reached
@@ -91,14 +96,14 @@ class Worker(Agent, mp.Process):
                 # perform action according to policy
                 states.append(state)
                 policy, action = self.action(state)
-                state, reward, done = self.env.step(action)
+                state, reward, done = self.env.step(action, image=True)
                 actions.append(action)
                 rewards.append(reward)
                 reward_ep += reward
 
                 if done: # stop early if we reach a terminal state
                     self.logq.put(LogEntry(LogType.SCALAR, f"reward/{self.name}", reward_ep, self.global_counter.value, {}))
-                    state = self.env.reset()
+                    state = self.env.reset(image=True)
                     reward_eps.append(reward_ep)
                     # increment global episode counter
                     with self.global_counter.get_lock():
@@ -155,15 +160,17 @@ class Worker(Agent, mp.Process):
         return_dict[f"{self.idx}-reward_ep"] = reward_eps
 
     def _get_value(self, state):
-        state = torch.FloatTensor(state)
-        value = self.valuenet(state)
+        state = torch.FloatTensor(state).unsqueeze(dim=0)
+        representation = self.convnet(state).squeeze(dim=0)
+        value = self.valuenet(representation)
         return value
 
     def _get_log_policy(self, current_state, current_action):
         # returns the log policy of the action taken
-        current_state = torch.FloatTensor(current_state)
+        current_state = torch.FloatTensor(current_state).unsqueeze(dim=0)
         current_action = torch.LongTensor([self.actions.index(current_action)]) # convert current_action to tensor
-        policy = self.policynet(current_state)
+        representation = self.convnet(current_state).squeeze(dim=0)
+        policy = self.policynet(representation)
         policy = F.log_softmax(policy, dim=0)
         policy_action = torch.index_select(policy, dim=0, index=current_action)
         return policy_action
@@ -178,8 +185,9 @@ class Worker(Agent, mp.Process):
             entropy: entropy value of the current state
         """
         # TODO technically entropy should use log base 2
-        current_state = torch.FloatTensor(current_state)
-        logit_policy = self.policynet(current_state)
+        current_state = torch.FloatTensor(current_state).unsqueeze(dim=0)
+        representation = self.convnet(current_state).squeeze(dim=0)
+        logit_policy = self.policynet(representation)
         policy = F.softmax(logit_policy, dim=0)
         log_policy = F.log_softmax(logit_policy, dim=0)
         entropy = -torch.dot(policy, log_policy)
@@ -213,9 +221,12 @@ class Worker(Agent, mp.Process):
     def _clip_gradients(self):
         clip_grad_norm_(self.policynet.parameters(),  self.grad_clip)
         clip_grad_norm_(self.valuenet.parameters(), self.grad_clip)
+        clip_grad_norm_(self.convnet.parameters(), self.grad_clip)
 
     def update_shared_nets(self):
         self.shared_policy_optim.step()
         self.shared_value_optim.step()
+        self.shared_conv_optim.step()
         self.shared_policy_optim.zero_grad()
         self.shared_value_optim.zero_grad()
+        self.shared_conv_optim.zero_grad()

@@ -45,18 +45,23 @@ class A3CAgent(Agent):
         # initialize networks
         self.policynet = config["policynet"]()
         self.valuenet = config["valuenet"]()
+        self.convnet = config["convnet"]()
 
         # move models to shared memory
         self.policynet.share_memory()
         self.valuenet.share_memory()
+        self.convnet.share_memory()
 
         self.policynetfunc = config["policynet"] # save 'constructors' of network to create workers
         self.valuenetfunc = config["valuenet"]
+        self.convnetfunc = config["convnet"]
+
         self.tmax = config["lookahead"] # maximum lookahead
 
         # optimizers
         self.policy_optim = SGD(self.policynet.parameters(), lr=config["policy_lr"], weight_decay=config["policy_decay"])
         self.value_optim = SGD(self.valuenet.parameters(), lr=config["value_lr"], weight_decay=config["value_decay"])
+        self.conv_optim = SGD(self.convnet.parameters(), lr=config["conv_lr"], weight_decay=config["conv_decay"])
 
         self.global_counter = Value('i', 0) # global episode counter
         self.env_factory = config["env"]
@@ -94,7 +99,7 @@ class A3CAgent(Agent):
         return_dict["scores"] = list()
         processes = list()
         for i in range(num_processes):
-            worker = Worker(self.config["entropy"], self.config["entropy_weight"], self.logq, self.policynet, self.valuenet, self.policy_optim, self.value_optim, self.global_counter, self.policynetfunc, self.valuenetfunc, self.tmax, self.config["epsilon"], self.env_factory, self.actions, i, self.config["grad_clip"], self.config["gamma"])
+            worker = Worker(self.config["entropy"], self.config["entropy_weight"], self.logq, self.policynet, self.valuenet, self.convnet, self.policy_optim, self.value_optim, self.conv_optim, self.global_counter, self.policynetfunc, self.valuenetfunc, self.convnetfunc, self.tmax, self.config["epsilon"], self.env_factory, self.actions, i, self.config["grad_clip"], self.config["gamma"])
             processes.append(Process(target=worker.train, args=(Tmax,return_dict, True, render)))
 
         # start worker processes

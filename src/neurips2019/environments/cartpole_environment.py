@@ -9,19 +9,23 @@ class CartpoleEnv(Environment):
         Environment.__init__(self)
         self.env = gym.make('CartPole-v1')
 
-    def step(self, action):
-       state, reward, done, _ =  self.env.step(action)
-       if self.render:
-           self.env.render()
-       return state, reward, done
+    def step(self, action, image=False):
+        state, reward, done, _ =  self.env.step(action)
+        if self.render:
+            self.env.render(mode="human")
+        if image:
+            state = self.env.render(mode="rgb_array").transpose((2, 0, 1)).copy()
+        return state, reward, done
 
     def get_actionspace(self):
         return [0,1]
 
-    def reset(self):
+    def reset(self, image=False):
         state = self.env.reset()
         if self.render:
             self.env.render()
+        if image:
+            state = self.env.render(mode="rgb_array").transpose((2,0,1)).copy()
         return state
 
     def close_window(self):

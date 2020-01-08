@@ -6,12 +6,13 @@ Use this file to change the configs or create new ones (and if possible link the
 
 from neurips2019.environments.LunarLanderFactory import LunarLanderFactory
 from neurips2019.environments.CartpoleFactory import CartpoleFactory
-from neurips2019.agents.Networks import Net
+from neurips2019.agents.Networks import Net, CNN
 from neurips2019.util.Logger import Logger
 from neurips2019.util.utils import annealing, slow_annealing
 
 # Shared hyperparameters
 NUM_THREADS = 4
+STATE_SIZE = (400, 600, 3)
 
 def get_config(env_name:str):
     """Convenience function to get config by string."""
@@ -63,9 +64,12 @@ def get_cartpole_config():
         return Net(4,10,2)
     def value_net_cp():
         return Net(4,10,1)
+    def conv_net_cp():
+        return CNN(STATE_SIZE[0], STATE_SIZE[1], 4)
     cartpole_conf = {
         "valuenet": value_net_cp, # function returning a pytorch network to encode policy
         "policynet": policy_net_cp, # function returning a pytorch network to encode state values
+        "convnet": conv_net_cp, # function returning a pytorch network to process image input states
         "train_blocks": 1, # how often train is called
         "block_size": 5000, # episodes per call to train
         "num_workers": NUM_THREADS, # number of worker processes
@@ -76,8 +80,10 @@ def get_cartpole_config():
         "epsilon": annealing, # exploration strategy
         "policy_lr": 0.0002, # learning rate for policy net optimizer
         "value_lr": 0.0002, # learning rate for valuenet optimizer
+        "conv_lr": 0.0002, # learning rate for convnet
         "policy_decay": 0.0001, # weight decay for policy optimizer
         "value_decay": 0.0001, # weight decay for value optimizer
+        "conv_decay": 0.0001, # weight decay for convnet
         "env": CartpoleFactory(), # environment factory object
         "evaluate": 10, # number of episodes to play for evaluation
         "grad_clip": 40, # max norm for gradients, used to clip gradients
