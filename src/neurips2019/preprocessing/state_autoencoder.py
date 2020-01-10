@@ -5,7 +5,9 @@ import torchvision
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from neurips2019.preprocessing import neurosmash_state_processing
+from neurips2019.preprocessing.neurosmash_state_processing import state_to_screen
+import multiprocessing as mp
+from functools import partial
 
 
 class StateDataset(Dataset):
@@ -19,15 +21,20 @@ class StateDataset(Dataset):
         states = np.load(states_file)
 
         if screensize is None:
-            screensize = np.sqrt(states.shape[1] / 3)
+            screensize = int(np.sqrt(states.shape[1] / 3))
         self.screensize = int(screensize)
 
-        screens = [neurosmash_state_processing.state_to_screen(state, tofloat=True, outsize=self.screensize) for state in states]
-        # self.empty_screen = np.mean(screens, axis=0)
-        self.screens = [torch.tensor(screen) for screen in screens]
+        # ToDo: Fix this executing main code?
+        # with mp.Pool() as p:
+        #     func = partial(state_to_screen, tofloat=True, outsize=self.screensize, asTensor=True)
+        #     screens = p.map(func, states)
+        screens = []
+        for i, s in enumerate(states):
+            screens.append(state_to_screen(s, tofloat=True, outsize=self.screensize, asTensor=True))
 
-        # for state in states:
-        #     self.screens.append(torch.tensor(neurosmash_state_processing.state_to_screen(state, outsize=self.screensize)))
+        # screens = np.array([state_to_screen(s, tofloat=True, outsize=self.screensize, asTensor=True) for s in states])
+
+        self.screens = screens
 
     def __len__(self):
         return len(self.screens)

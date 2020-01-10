@@ -2,11 +2,12 @@ import os
 import numpy as np
 import cv2
 from datetime import datetime
+import torch
 
 STATES_SAVEDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'states/')
 
 
-def state_to_screen(state, size=None, outsize=580, tofloat=True, norm=False, gray=False):
+def state_to_screen(state, size=None, outsize=580, tofloat=True, norm=False, gray=False, asTensor=False):
     """
     Takes the state representation returned from the Neurosmash envrionment and forms it into
     a square image only containing the rotated platform.
@@ -60,6 +61,9 @@ def state_to_screen(state, size=None, outsize=580, tofloat=True, norm=False, gra
         screen = rgb2gray(screen)
     if norm:
         screen = normalize(screen)
+
+    if asTensor:
+        screen = torch.tensor(screen)
 
     return screen
 
