@@ -16,7 +16,7 @@ def state_to_screen(state, size=None, outsize=580, tofloat=True, norm=False, gra
     If gray is true, image will be turned into grayscale before returning.
     """
     if not size:
-        size = np.int(np.sqrt(len(state)/3))
+        size = np.int(np.sqrt(len(state) / 3))
 
     scaler = lambda x: _scale_to_int(x, size, 768)
     screen = np.reshape(state, (size, size, 3)).astype(np.uint8)
@@ -101,14 +101,14 @@ def _scale_to_int(num, nsize, ref):
     return int(num * (nsize / ref) + 0.5)
 
 
-def save_states(states, agent_name, savedir=STATES_SAVEDIR):
+def save_states(states, agent_name, savedir=None):
     """
     Saves states to a a given directory
     """
-    print(savedir)
+    if savedir is None:
+        savedir = STATES_SAVEDIR
     states = np.array(states, dtype=np.int8)
     filename = f"states_{agent_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.npy"
-    print(filename)
-    with open(os.path.join(savedir, filename), 'wb') as fp:
-        print(fp)
-        np.save(fp, states)
+    path = os.path.join(savedir, filename)
+    print(f"Saving to {path}")
+    np.save(path, states)
