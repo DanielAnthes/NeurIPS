@@ -1,5 +1,7 @@
 #%% Imports
 import os
+import sys
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -19,7 +21,7 @@ CUDA = True
 if CUDA:
     torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
-p = os.path.join(os.getcwd(), "logs", "NeuroSmashStates", "run01", "w01", "states_randomagent-3_20200109_235519.npy")
+p = os.path.join(os.getcwd(), "logs", "NeuroSmashStates", "run01", "w01", "test.npz")
 screenDataset = state_autoencoder.StateDataset(p)#('/neurips2019/preprocessing/states/states_RandomAgent_20191216_193356.npy', screensize=screensize)
 screensize = screenDataset[0].shape[0]
 print(f"Training on dataset of size: {len(screenDataset)}")
@@ -44,6 +46,7 @@ if CUDA:
     autoencoder = autoencoder.cuda() # .to(cuda, dtype=torch.float32, non_blocking=False)
 optimizer = torch.optim.Adam(autoencoder.parameters(), lr=learning_rate)
 loss_func = nn.MSELoss()
+
 
 epochs = 2
 

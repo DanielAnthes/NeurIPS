@@ -1,3 +1,5 @@
+from collections import OrderedDict, namedtuple
+
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
@@ -10,48 +12,67 @@ import multiprocessing as mp
 from functools import partial
 
 
-class StateDataset(Dataset):
+current_batch = namedtuple("NumpyBatch", ("states", "indices"))
 
+
+class StateDataset(Dataset):
     def __init__(self, states_file, screensize=None):
         """
         Args:
-            states_file (string): Path to the list of states
+            states_file (string): Path to either an npy or an npz file
+                                    If npz file, each npy file contained should only contain one single state
         """
         self.states_file = states_file
         states = np.load(states_file)
 
-        if screensize is None:
-            screensize = int(np.sqrt(states.shape[1] / 3))
-        self.screensize = int(screensize)
+        if type(states) is np.ndarray:
+            self.mode = "array"
+            if screensize is None:
+                screensize = int(np.sqrt(states.shape[-1] / 3))
+            self.screensize = int(screensize)
 
-        # ToDo: Fix this executing main code?
-        # with mp.Pool() as p:
-        #     func = partial(state_to_screen, tofloat=True, outsize=self.screensize, asTensor=True)
-        #     screens = p.map(func, states)
-        screens = []
-        for i, s in enumerate(states):
-            screens.append(state_to_screen(s, tofloat=True, outsize=self.screensize, asTensor=True))
+            # ToDo: Fix this executing main code?
+            # with mp.Pool() as p:
+            #     func = partial(state_to_screen, tofloat=True, outsize=self.screensize, asTensor=True)
+            #     screens = p.map(func, states)
+            screens = []
+            for i, s in enumerate(states):
+                screens.append(state_to_screen(s, tofloat=True, outsize=self.screensize))
 
-        # screens = np.array([state_to_screen(s, tofloat=True, outsize=self.screensize, asTensor=True) for s in states])
+            # screens = np.array([state_to_screen(s, tofloat=True, outsize=self.screensize, asTensor=True) for s in states])
+            self.screens = screens
 
-        self.screens = screens
+        elif type(states) is np.lib.npyio.NpzFile:
+            self.mode = "npz"
+            self.states = states
+            arr0 = states.files[0]
+            if screensize is None:
+                screensize = int(np.sqrt(states[arr0].shape[-1] / 3))
+            self.screensize = int(screensize)
 
     def __len__(self):
-        return len(self.screens)
+        if self.mode == "array":
+            return len(self.screens)
+        elif self.mode == "npz":
+            return len(self.states.files)
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
+        if self.mode == "array":
+            return torch.tensor(self.screens[idx])
+        elif self.mode == "npz":
+            items = self.states[self.states.files[idx]]
+            screens = state_to_screen(items, tofloat=True, outsize=self.screensize)
+            return torch.tensor(screens)
 
-        return self.screens[idx]
-
-    def show(self, idx):
-        plt.imshow(self[idx])
-        plt.show()
-
-    def show_empty(self):
-        plt.imshow(self.empty_screen)
-        plt.show()
+    # def show(self, idx):
+    #     plt.imshow(self[idx])
+    #     plt.show()
+    #
+    # def show_empty(self):
+    #     plt.imshow(self.empty_screen)
+    #     plt.show()
 
 
 class Flatten(nn.Module):

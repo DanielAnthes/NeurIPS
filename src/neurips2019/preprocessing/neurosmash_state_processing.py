@@ -7,7 +7,7 @@ import torch
 STATES_SAVEDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'states/')
 
 
-def state_to_screen(state, size=None, outsize=580, tofloat=True, norm=False, gray=False, asTensor=False):
+def state_to_screen(state, size=None, outsize=None, tofloat=True, norm=False, gray=False, asTensor=False):
     """
     Takes the state representation returned from the Neurosmash envrionment and forms it into
     a square image only containing the rotated platform.
@@ -17,7 +17,9 @@ def state_to_screen(state, size=None, outsize=580, tofloat=True, norm=False, gra
     If gray is true, image will be turned into grayscale before returning.
     """
     if not size:
-        size = np.int(np.sqrt(len(state) / 3))
+        if type(state) is list:
+            state = np.array(state)
+        size = np.int(np.sqrt(state.shape[-1] / 3))
 
     scaler = lambda x: _scale_to_int(x, size, 768)
     screen = np.reshape(state, (size, size, 3)).astype(np.uint8)
@@ -55,7 +57,8 @@ def state_to_screen(state, size=None, outsize=580, tofloat=True, norm=False, gra
     M = cv2.getPerspectiveTransform(pts1, pts2)
     rect = scaler(580)
     screen = cv2.warpPerspective(screen, M, (rect, rect))
-    screen = cv2.resize(screen, (outsize, outsize))
+    if outsize is not None:
+        screen = cv2.resize(screen, (outsize, outsize))
 
     if gray:
         screen = rgb2gray(screen)
