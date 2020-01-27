@@ -11,17 +11,36 @@ from torch.utils.tensorboard import SummaryWriter
 
 import neurips2019.preprocessing.state_autoencoder as state_autoencoder
 
-batch_size = 8
+batch_size = 256
 learning_rate = 0.005
-validation_split = 0.12
+validation_split = 0.2
 log_path = os.path.join("logs", "AutoEncoder")
 CUDA = True
+
+
+def eval_loop():
+    print("Entering Eval Loop")
+    autoencoder.eval()
+    v_losses = 0
+    for v_batch, screens in enumerate(valid_dataloader):
+        print(f"Validation Step {v_batch}/{len(valid_dataloader)}", end="\r")
+        img = screens.view(-1, screensize, screensize, 3).float()
+        encoded, decoded = autoencoder(img)
+        v_losses += loss_func(decoded, img).cpu().data.numpy()
+    print("Writing validation and saving model")
+    writer.add_scalar("eval/loss", v_losses / len(valid_dataloader), gstep)
+    writer.add_images("eval/decoded", decoded[1:5], gstep)
+    writer.add_images("eval/screens", screens[1:5], gstep)
+    autoencoder.train()
+    # torch.save(autoencoder, os.path.join(log_path, f"checkpoint-{gstep}"))
+    # print(f"Epoch ended with loss: {losses[-1]:.4f} || Avg Loss: {np.mean(losses):.4f}")
 
 
 if CUDA:
     torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
-p = os.path.join(os.getcwd(), "logs", "NeuroSmashStates", "run01", "w01", "test.npz")
+p = os.path.join(os.getcwd(), "logs", "NeuroSmashStates", "run01", "full.npz")
+print(f"Loading Dataset from {p}")
 screenDataset = state_autoencoder.StateDataset(p)#('/neurips2019/preprocessing/states/states_RandomAgent_20191216_193356.npy', screensize=screensize)
 screensize = screenDataset[0].shape[0]
 print(f"Training on dataset of size: {len(screenDataset)}")
@@ -49,13 +68,17 @@ loss_func = nn.MSELoss()
 
 
 epochs = 2
+eval_time = len(train_dataloader) // 4
 
 gstep = 0
 for epoch in range(epochs):
+    # eval_loop()
     print(f"Starting Epoch {epoch+1}")
     losses = []
     for i_batch, screens in enumerate(train_dataloader):
         gstep += 1
+        if gstep % 10 == 0:
+            print(f"Step {gstep}/{len(train_dataloader)}", end="\r")
         imgs = screens.view(-1, screensize, screensize, 3).float()
 
         encoded, decoded = autoencoder(imgs)
@@ -74,36 +97,10 @@ for epoch in range(epochs):
         #     bar += str(int((perdec * 10)) % 10)
         # print(f"[{bar}] || Last Loss: {l:.4f}", end="\r", flush=True)
         # print('Epoch: ', epoch, '| train loss: %.4f' % loss.data.numpy())
-
         if gstep % 100 == 0:
-            autoencoder.eval()
-            v_losses = torch.tensor([0])
-            for v_batch, screens in enumerate(valid_dataloader):
-                img = screens.view(-1, screensize, screensize, 3).float()
+            torch.save(autoencoder, os.path.join(log_path, f"checkpoint-{gstep}"))
+        if gstep % eval_time == 0:
+            eval_loop()
 
-                encoded, decoded = autoencoder(img)
-                v_losses += loss_func(decoded, img)
-
-            writer.add_scalar("eval/loss", v_losses / len(valid_dataloader), gstep)
-            writer.add_images("eval/decoded", decoded[1:5], gstep)
-            writer.add_images("eval/screens", screens[1:5], gstep)
-            autoencoder.train()
-
-    # print(f"Epoch ended with loss: {losses[-1]:.4f} || Avg Loss: {np.mean(losses):.4f}")
-
-
-autoencoder.eval()
-v_losses = []
-for v_batch, screens in enumerate(valid_dataloader):
-    img = screens.view(-1, screensize, screensize, 3).float()
-
-    encoded, decoded = autoencoder(img)
-    v_losses.append(loss_func(decoded, img).data.numpy())
-writer.add_scalar("eval/loss", np.mean(v_losses), gstep)
-writer.add_images("eval/decoded", decoded[1:5], gstep)
-writer.add_images("eval/screens", screens[1:5], gstep)
-
-#%% Tests
-# autoencoder.eval()
-# encoded_test, decoded_test = autoencoder(screenDataset[10].float().unsqueeze(0))
+eval_loop()
 

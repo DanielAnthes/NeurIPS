@@ -123,10 +123,10 @@ class AutoEncoder(nn.Module):
         self.encoder1 = nn.Sequential()
         self.encoder1.add_module("rollaxis", Rollaxis())
         self.encoder1.add_module("init_batchnorm", nn.BatchNorm2d(3))
-        self.encoder1.add_module("conv1", nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1, dilation=1))
+        self.encoder1.add_module("conv1", nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, dilation=1))
         out_dim = calc_dim(out_dim, 3, 1, 1, 1)
         self.encoder1.add_module("act1", nn.SELU(True))
-        self.encoder1.add_module("conv2", nn.Conv2d(32, 128, kernel_size=3, stride=2, padding=1))
+        self.encoder1.add_module("conv2", nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1))
         out_dim = calc_dim(out_dim, 3, 2, 1, 1)
         self.encoder1.add_module("act2", nn.SELU(True))
 
@@ -134,7 +134,7 @@ class AutoEncoder(nn.Module):
         out_dim = out_dim // 2
 
         self.encoder2 = nn.Sequential()
-        self.encoder2.add_module("conv3", nn.Conv2d(128, 16, kernel_size=3, stride=2, padding=1))
+        self.encoder2.add_module("conv3", nn.Conv2d(32, 16, kernel_size=3, stride=2, padding=1))
         out_dim = calc_dim(out_dim, 3, 2, 1, 1)
         self.encoder2.add_module("flatten", Flatten())
         self.encoder2.add_module("ffn_batchnorm", nn.BatchNorm1d(out_dim**2 * 16))
@@ -145,14 +145,14 @@ class AutoEncoder(nn.Module):
             nn.Linear(128, 1024),
             nn.Linear(1024, out_dim**2 * 16),
             Reshape((16, out_dim, out_dim)),
-            nn.ConvTranspose2d(16, 128, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.ConvTranspose2d(16, 32, kernel_size=3, stride=2, padding=1, output_padding=1),
         )
         self.decoder_unpool = nn.MaxUnpool2d(2, stride=2)
         self.decoder2 = nn.Sequential(
             nn.SELU(True),
-            nn.ConvTranspose2d(128, 32, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.ConvTranspose2d(32, 16, kernel_size=3, stride=2, padding=1, output_padding=1),
             nn.SELU(True),
-            nn.ConvTranspose2d(32, 3, kernel_size=3, stride=1, padding=1),
+            nn.ConvTranspose2d(16, 3, kernel_size=3, stride=1, padding=1),
             Unrollaxis()
         )
 
