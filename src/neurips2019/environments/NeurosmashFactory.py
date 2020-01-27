@@ -14,6 +14,6 @@ class NeurosmashFactory(EnvironmentFactory):
         with self.num_instances.get_lock():
             self.num_instances.value +=1
             # for now the first neurosmash instance gets port 13000, port numbers are incremented for following instances
-            port = self.port + (self.num_instances - 1)
+            port = self.port + (self.num_instances.value - 1)
             env = NeurosmashEnvironment(timescale=self.timescale, size=self.size, port=port, ip=self.ip)
         return env

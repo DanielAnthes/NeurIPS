@@ -18,5 +18,5 @@ class NeurosmashEnvironment(Environment):
         _,_, state = self.env.reset()
         return state
 
-    def close_window(self):
+    def close_window(self, **kwargs):
         pass
