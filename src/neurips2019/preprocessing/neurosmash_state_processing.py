@@ -6,7 +6,7 @@ from datetime import datetime
 STATES_SAVEDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'states/')
 
 
-def state_to_screen(state, size=None, outsize=580, tofloat=True, norm=False, gray=False):
+def state_to_screen(state, size=None, outsize=None, tofloat=True, norm=False, gray=False):
     """
     Takes the state representation returned from the Neurosmash envrionment and forms it into
     a square image only containing the rotated platform.
@@ -17,6 +17,8 @@ def state_to_screen(state, size=None, outsize=580, tofloat=True, norm=False, gra
     """
     if not size:
         size = np.int(np.sqrt(len(state)/3))
+    if not outsize:
+        outsize = size
 
     scaler = lambda x: _scale_to_int(x, size, 768)
     screen = np.reshape(state, (size, size, 3)).astype(np.uint8)
