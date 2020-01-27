@@ -154,8 +154,8 @@ class A3CAgent(Agent):
         """
         state = torch.FloatTensor(state).unsqueeze(dim=0)
         with torch.no_grad():
-            representation = self.covnet(state).squeeze(dim=0)
-            policy = self.policynet(state)
+            representation = self.convnet(state).squeeze(dim=0)
+            policy = self.policynet(representation)
             probs = F.softmax(policy, dim=0).data.numpy()
             idx = np.argmax(probs)
         return policy, self.actions[idx]
