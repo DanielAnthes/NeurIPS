@@ -12,8 +12,8 @@ from neurips2019.util.Logger import Logger
 from neurips2019.util.utils import annealing, slow_annealing
 
 # Shared hyperparameters
-NUM_THREADS = 4
-STATE_SIZE = (400, 600, 3)
+NUM_THREADS = 8
+STATE_SIZE = (64, 64, 3)
 
 def get_config(env_name:str):
     """Convenience function to get config by string."""

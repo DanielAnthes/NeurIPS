@@ -14,7 +14,7 @@ from neurips2019.util.Logger import Logger
 from A3C_configs import get_config
 
 # where to save logs
-SAVE_DIR = os.path.join("logs","A3C","neurosmash_1")
+SAVE_DIR = os.path.join("logs","A3C","neurosmash_8_workers")
 # initializes agent and runs training loop
 def main(config):
     """Trains and evaluates an A3C agent according to config"""
