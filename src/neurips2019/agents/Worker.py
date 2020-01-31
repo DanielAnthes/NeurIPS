@@ -114,10 +114,6 @@ class Worker(Agent, mp.Process):
                             print(f">> Current score: {reward_ep}")
                             print(f">> Last 100 mean score: {np.mean(reward_eps[-100:])}")
                             print(f">> Epsilon: {self.epsilon(self.global_counter.value)}")
-                            self.env.render = render # render next episode
-                        else:
-                            self.env.close_window() # closes window after episode is finished
-                            self.env.render = False
 
                     reward_ep = 0
                     break
@@ -158,6 +154,9 @@ class Worker(Agent, mp.Process):
         return_dict[f"{self.idx}-policyloss"] = policy_losses
         return_dict[f"{self.idx}-valueloss"] = value_losses
         return_dict[f"{self.idx}-reward_ep"] = reward_eps
+
+        # close the environment window when done (only applies to AIGym Environments)
+        self.env.close_window()
 
     def _get_value(self, state):
         state = torch.FloatTensor(state).unsqueeze(dim=0)

@@ -14,7 +14,7 @@ from neurips2019.util.Logger import Logger
 from A3C_configs import get_config
 
 # where to save logs
-SAVE_DIR = os.path.join("logs","A3C","neurosmash_8_workers")
+SAVE_DIR = os.path.join("logs","A3C","cartpole_cnn")
 # initializes agent and runs training loop
 def main(config):
     """Trains and evaluates an A3C agent according to config"""
@@ -64,4 +64,4 @@ def main(config):
 
 # if this file is called as the main entry point for the program, call the main function with parameters specified in config
 if __name__ == "__main__":
-    main(get_config("neurosmash"))
+    main(get_config("cartpole"))
