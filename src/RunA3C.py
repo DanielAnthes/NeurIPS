@@ -8,13 +8,21 @@ from neurips2019.environments.LunarLanderFactory import LunarLanderFactory
 from neurips2019.environments.CartpoleFactory import CartpoleFactory
 from neurips2019.agents.A3C import A3CAgent
 from neurips2019.agents.Networks import Net
-from neurips2019.util.utils import annealing, slow_annealing
+from neurips2019.util.utils import annealing, slow_annealing, save_network, load_network
 from neurips2019.util.Logger import Logger
 
 from A3C_configs import get_config
 
 # where to save logs
 SAVE_DIR = os.path.join("logs","A3C","cartpole_cnn")
+
+# load saved weights
+valuenet_params = "value_weights"
+policynet_params = "policy_weights"
+convnet_params = "conv_weights"
+load_params = True
+
+
 # initializes agent and runs training loop
 def main(config):
     """Trains and evaluates an A3C agent according to config"""
@@ -24,6 +32,12 @@ def main(config):
     logger = Logger(SAVE_DIR, queue)
     # the main instance to run off
     agent = A3CAgent(config, queue)
+    if load_params:
+        print("Loading parameters...")
+        load_network(agent.policynet, policynet_params)
+        load_network(agent.valuenet, valuenet_params)
+        load_network(agent.convnet, convnet_params)
+        print("done.")
 
     # create logging thread
     log_thread = Thread(target=logger.run, name="logger")
@@ -51,6 +65,14 @@ def main(config):
         # stop and close logger
         queue.put(None)
         log_thread.join()
+
+        # save weights
+        print("Saving weights...")
+        save_network(agent.policynet, "policy_weights")
+        save_network(agent.valuenet, "value_weights")
+        save_network(agent.convnet, "conv_weights")
+        print("done.")
+
     except KeyboardInterrupt as e:
         # if interrupt collect thread first
         queue.put(None)
