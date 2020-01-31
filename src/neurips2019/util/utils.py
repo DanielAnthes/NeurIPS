@@ -44,6 +44,9 @@ def slow_annealing(episode):
     # specifies the strategy with which the probability of taking a random action changes, returns the current probability of a random action as a function of the number of episodes played
     return (min(1, 0.1 + np.exp(-0.00005 * episode)))
 
+def linear_annealing(episode):
+    return(max(0.05, 1-(0.000009*episode)))
+
 def save_network(network, name):
     torch.save(network.state_dict(), name)
 

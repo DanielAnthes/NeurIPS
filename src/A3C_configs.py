@@ -80,7 +80,7 @@ def get_cartpole_config():
         "show_immediate": False, # show plots after each call to train
         "keep_plots": True, # keep plots open after training has finished
         "debug": False, # additional debug prints
-        "epsilon": annealing, # exploration strategy
+        "epsilon": slow_annealing, # exploration strategy
         "policy_lr": 0.0001, # learning rate for policy net optimizer
         "value_lr": 0.0001, # learning rate for valuenet optimizer
         "conv_lr": 0.0001, # learning rate for convnet
