@@ -1,5 +1,5 @@
 import torch
-from torch.optim import Adam, SGD, RMSProp
+from torch.optim import Adam, SGD, RMSprop
 import torch.nn.functional as F
 from torch.multiprocessing import Lock, Value, Process, Manager
 from neurips2019.agents.agent import Agent
@@ -60,9 +60,9 @@ class A3CAgent(Agent):
         self.tmax = config["lookahead"] # maximum lookahead
 
         # optimizers
-        self.policy_optim = RMSProp(self.policynet.parameters(), lr=config["policy_lr"], weight_decay=config["policy_decay"])
-        self.value_optim = RMSProp(self.valuenet.parameters(), lr=config["value_lr"], weight_decay=config["value_decay"])
-        self.conv_optim = RMSProp(self.convnet.parameters(), lr=config["conv_lr"], weight_decay=config["conv_decay"])
+        self.policy_optim = RMSprop(self.policynet.parameters(), lr=config["policy_lr"], weight_decay=config["policy_decay"])
+        self.value_optim = RMSprop(self.valuenet.parameters(), lr=config["value_lr"], weight_decay=config["value_decay"])
+        self.conv_optim = RMSprop(self.convnet.parameters(), lr=config["conv_lr"], weight_decay=config["conv_decay"])
 
         self.global_counter = Value('i', 0) # global episode counter
         self.env_factory = config["env"]

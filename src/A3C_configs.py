@@ -12,7 +12,7 @@ from neurips2019.util.Logger import Logger
 from neurips2019.util.utils import annealing, slow_annealing
 
 # Shared hyperparameters
-NUM_THREADS = 2
+NUM_THREADS = 4
 STATE_SIZE = (64, 64, 3)
 
 def get_config(env_name:str):
@@ -64,26 +64,26 @@ def get_cartpole_config():
     returns cartpole config dict for A3C
     """
     def policy_net_cp():
-        return Net(4,10,2)
+        return Net(256,2)
     def value_net_cp():
-        return Net(4,10,1)
+        return Net(256,1)
     def conv_net_cp():
-        return CNN(STATE_SIZE[0], STATE_SIZE[1], 4)
+        return CNN(256)
     cartpole_conf = {
         "valuenet": value_net_cp, # function returning a pytorch network to encode policy
         "policynet": policy_net_cp, # function returning a pytorch network to encode state values
         "convnet": conv_net_cp, # function returning a pytorch network to process image input states
         "train_blocks": 1, # how often train is called
-        "block_size": 10, # episodes per call to train
+        "block_size": 5000, # episodes per call to train
         "num_workers": NUM_THREADS, # number of worker processes
         "lookahead": 30, # steps to take before computing losses
         "show_immediate": False, # show plots after each call to train
         "keep_plots": True, # keep plots open after training has finished
         "debug": False, # additional debug prints
         "epsilon": annealing, # exploration strategy
-        "policy_lr": 0.00001, # learning rate for policy net optimizer
-        "value_lr": 0.00001, # learning rate for valuenet optimizer
-        "conv_lr": 0.00001, # learning rate for convnet
+        "policy_lr": 0.0001, # learning rate for policy net optimizer
+        "value_lr": 0.0001, # learning rate for valuenet optimizer
+        "conv_lr": 0.0001, # learning rate for convnet
         "policy_decay": 0.0001, # weight decay for policy optimizer
         "value_decay": 0.0001, # weight decay for value optimizer
         "conv_decay": 0.0001, # weight decay for convnet
@@ -92,8 +92,8 @@ def get_cartpole_config():
         "grad_clip": 40, # max norm for gradients, used to clip gradients
         "gamma": 0.99, # discount for future rewards
         "actions": [0,1], # actions allowed in the environment
-        "entropy": True, # minimize entropy as part of loss function
-        "entropy_weight": 10 # weight of entropy in loss function
+        "entropy": False, # minimize entropy as part of loss function
+        "entropy_weight": -0.2 # weight of entropy in loss function
     }
 
     return cartpole_conf
@@ -110,7 +110,7 @@ def get_neuro_smash():
         "policynet": policy_net, # function returning a pytorch network to encode state values
         "convnet": conv_net, # function returning a pytorch network to process image input states
         "train_blocks": 1, # how often train is called
-        "block_size": 10, # episodes per call to train
+        "block_size": 5, # episodes per call to train
         "num_workers": NUM_THREADS, # number of worker processes
         "lookahead": 30, # steps to take before computing losses
         "show_immediate": False, # show plots after each call to train
@@ -123,8 +123,8 @@ def get_neuro_smash():
         "policy_decay": 0.0001, # weight decay for policy optimizer
         "value_decay": 0.0001, # weight decay for value optimizer
         "conv_decay": 0.0001, # weight decay for convnet
-        "env": NeurosmashFactory(port=6000, size=64, timescale=5), # environment factory object
-        "evaluate": 10, # number of episodes to play for evaluation
+        "env": NeurosmashFactory(port=8000, size=64, timescale=5), # environment factory object
+        "evaluate": 1, # number of episodes to play for evaluation
         "grad_clip": 40, # max norm for gradients, used to clip gradients
         "gamma": 0.99, # discount for future rewards
         "actions": [0,1], # actions allowed in the environment

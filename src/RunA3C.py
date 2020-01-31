@@ -64,4 +64,4 @@ def main(config):
 
 # if this file is called as the main entry point for the program, call the main function with parameters specified in config
 if __name__ == "__main__":
-    main(get_config("neurosmash"))
+    main(get_config("cartpole"))
