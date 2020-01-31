@@ -9,7 +9,7 @@ from neurips2019.environments.CartpoleFactory import CartpoleFactory
 from neurips2019.environments.NeurosmashFactory import NeurosmashFactory
 from neurips2019.agents.Networks import Net, CNN
 from neurips2019.util.Logger import Logger
-from neurips2019.util.utils import annealing, slow_annealing
+from neurips2019.util.utils import annealing, slow_annealing, linear_annealing
 
 # Shared hyperparameters
 NUM_THREADS = 4
@@ -74,13 +74,13 @@ def get_cartpole_config():
         "policynet": policy_net_cp, # function returning a pytorch network to encode state values
         "convnet": conv_net_cp, # function returning a pytorch network to process image input states
         "train_blocks": 1, # how often train is called
-        "block_size": 50, # episodes per call to train
+        "block_size": 15000, # episodes per call to train
         "num_workers": NUM_THREADS, # number of worker processes
         "lookahead": 30, # steps to take before computing losses
         "show_immediate": False, # show plots after each call to train
         "keep_plots": True, # keep plots open after training has finished
         "debug": False, # additional debug prints
-        "epsilon": slow_annealing, # exploration strategy
+        "epsilon": linear_annealing, # exploration strategy
         "policy_lr": 0.0001, # learning rate for policy net optimizer
         "value_lr": 0.0001, # learning rate for valuenet optimizer
         "conv_lr": 0.0001, # learning rate for convnet
@@ -88,7 +88,7 @@ def get_cartpole_config():
         "value_decay": 0.0001, # weight decay for value optimizer
         "conv_decay": 0.0001, # weight decay for convnet
         "env": CartpoleFactory(), # environment factory object
-        "evaluate": 10, # number of episodes to play for evaluation
+        "evaluate": 50, # number of episodes to play for evaluation
         "grad_clip": 40, # max norm for gradients, used to clip gradients
         "gamma": 0.99, # discount for future rewards
         "actions": [0,1], # actions allowed in the environment
