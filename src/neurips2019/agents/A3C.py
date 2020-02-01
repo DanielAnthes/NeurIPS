@@ -162,8 +162,10 @@ class A3CAgent(Agent):
             representation = self.convnet(state).squeeze(dim=0)
             policy = self.policynet(representation)
             probs = F.softmax(policy, dim=0).data.numpy()
-            idx = np.argmax(probs)
-        return policy, self.actions[idx]
+            probs /= sum(probs) # ensure probs sum to 1
+            action = np.random.choice(self.actions, size=None, replace=False, p=probs) # choose action with probability according to policy
+
+        return policy, action
 
     def calc_loss(self):
         """ dummy loss function required by abstract agent class
