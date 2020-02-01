@@ -211,7 +211,7 @@ class Worker(Agent, mp.Process):
             value_loss += advantage**2
         if self.entropy:
             policy_loss += entropy * self.entropy_weight
-        policy_loss = policy_loss ** 2 # non-negative only
+        policy_loss = policy_loss # ** 2 # non-negative only
         return policy_loss, value_loss, entropy
 
     def evaluate(self):
