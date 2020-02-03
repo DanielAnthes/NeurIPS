@@ -2,11 +2,12 @@ import os
 import numpy as np
 import cv2
 from datetime import datetime
+import torch
 
 STATES_SAVEDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'states/')
 
 
-def state_to_screen(state, size=None, outsize=None, tofloat=True, norm=False, gray=False):
+def state_to_screen(state, size=None, outsize=None, tofloat=True, norm=False, gray=False, asTensor=False):
     """
     Takes the state representation returned from the Neurosmash envrionment and forms it into
     a square image only containing the rotated platform.
@@ -16,7 +17,9 @@ def state_to_screen(state, size=None, outsize=None, tofloat=True, norm=False, gr
     If gray is true, image will be turned into grayscale before returning.
     """
     if not size:
-        size = np.int(np.sqrt(len(state)/3))
+        if type(state) is list:
+            state = np.array(state)
+        size = np.int(np.sqrt(state.shape[-1] / 3))
     if not outsize:
         outsize = size
 
@@ -56,12 +59,16 @@ def state_to_screen(state, size=None, outsize=None, tofloat=True, norm=False, gr
     M = cv2.getPerspectiveTransform(pts1, pts2)
     rect = scaler(580)
     screen = cv2.warpPerspective(screen, M, (rect, rect))
-    screen = cv2.resize(screen, (outsize, outsize))
+    if outsize is not None:
+        screen = cv2.resize(screen, (outsize, outsize))
 
     if gray:
         screen = rgb2gray(screen)
     if norm:
         screen = normalize(screen)
+
+    if asTensor:
+        screen = torch.tensor(screen)
 
     return screen
 
@@ -103,14 +110,14 @@ def _scale_to_int(num, nsize, ref):
     return int(num * (nsize / ref) + 0.5)
 
 
-def save_states(states, agent_name, savedir=STATES_SAVEDIR):
+def save_states(states, agent_name, savedir=None):
     """
     Saves states to a a given directory
     """
-    print(savedir)
+    if savedir is None:
+        savedir = STATES_SAVEDIR
     states = np.array(states, dtype=np.int8)
     filename = f"states_{agent_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.npy"
-    print(filename)
-    with open(os.path.join(savedir, filename), 'wb') as fp:
-        print(fp)
-        np.save(fp, states)
+    path = os.path.join(savedir, filename)
+    print(f"Saving to {path}")
+    np.save(path, states)
