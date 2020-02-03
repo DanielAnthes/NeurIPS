@@ -104,8 +104,30 @@ class A3CAgent(Agent):
         return_dict["scores"] = list()
         processes = list()
         for i in range(num_processes):
-            worker = Worker(self.config["entropy"], self.config["entropy_weight"], self.logq, self.policynet, self.valuenet, self.convnet, self.policy_optim, self.value_optim, self.conv_optim, self.global_counter, self.policynetfunc, self.valuenetfunc, self.convnetfunc, self.tmax, self.config["epsilon"], self.env_factory, self.actions, i, self.config["grad_clip"], self.config["gamma"])
-            processes.append(Process(target=worker.train, args=(Tmax,return_dict, True, render)))
+            worker = Worker(
+                    self.config["entropy"], 
+                    self.config["entropy_weight"], 
+                    self.logq, 
+                    self.policynet, 
+                    self.valuenet, 
+                    self.convnet, 
+                    self.policy_optim, 
+                    self.value_optim, 
+                    self.conv_optim, 
+                    self.global_counter, 
+                    self.policynetfunc, 
+                    self.valuenetfunc, 
+                    self.convnetfunc, 
+                    self.tmax, 
+                    self.config["epsilon"], 
+                    self.env_factory, 
+                    self.actions, 
+                    i, 
+                    self.config["grad_clip"], 
+                    self.config["gamma"], 
+                    self.config["frameskip"]
+                    )
+            processes.append(Process(target=worker.train, args=(Tmax,return_dict, False, render)))
 
         # start worker processes
         for p in processes:
@@ -143,8 +165,10 @@ class A3CAgent(Agent):
         # update networks with gradients from worker processes and reset gradients after
         self.policy_optim.step()
         self.value_optim.step()
+        self.conv_optim.step()
         self.policy_optim.zero_grad()
         self.value_optim.zero_grad()
+        self.conv_optim.zero_grad()
 
     def action(self, state):
         """
@@ -152,6 +176,7 @@ class A3CAgent(Agent):
 
         Args:
             state: current state of the environment
+            
 
         Returns:
             policy: policy values for all actions in this state

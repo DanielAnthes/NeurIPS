@@ -26,5 +26,6 @@ class NeurosmashEnvironment(Environment):
         pass
 
     def __to_screen(self, state):
-        return np.array(state, "uint8").reshape(self.size, self.size, 3).transpose((2, 0, 1))
-        #return s2s(state, )
+        # out = np.array(state, "uint8").reshape(self.size, self.size, 3)
+        out = s2s(state, size=self.size, outsize=40, tofloat=True, norm=True)
+        return out.transpose((2, 0, 1))

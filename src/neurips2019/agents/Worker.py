@@ -18,7 +18,7 @@ class Worker(Agent, mp.Process):
 # Instances of this class are created as separate processes to train the "main" a3c agent
 # extends the Agent interface as well as the pyTorch multiprocessing process class
 
-    def __init__(self, entropy, entropy_weight, logq:mp.Queue, shared_policy, shared_value, shared_conv, shared_policy_optim, shared_value_optim, shared_conv_optim, global_counter, policynetfunc, valuenetfunc, convnetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99):
+    def __init__(self, entropy, entropy_weight, logq:mp.Queue, shared_policy, shared_value, shared_conv, shared_policy_optim, shared_value_optim, shared_conv_optim, global_counter, policynetfunc, valuenetfunc, convnetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99, frameskip=0):
         self.env = env_factory.get_instance()
         self.name = f"worker-{idx:02d}"
         self.idx = idx
@@ -40,6 +40,10 @@ class Worker(Agent, mp.Process):
         self.shared_conv_optim = shared_conv_optim
         self.entropy = entropy
         self.entropy_weight = entropy_weight
+        
+        self.frameskip = frameskip
+        self.fs_count = 0
+        self.last_act = None
 
         # copy weights from shared network
         share_weights(self.shared_policy, self.policynet)
@@ -50,6 +54,12 @@ class Worker(Agent, mp.Process):
 
 
     def action(self, state):
+        # perform frame skip
+        if self.last_act is not None and self.fs_count < self.frameskip:
+            self.fs_count += 1
+            return self.last_act
+        # if frame skip is reached, reset counter
+        self.fs_count = 0
         # performs action according to policy, or at random with probability determined by epsilon greedy strategy
         state = torch.FloatTensor(state).unsqueeze(dim=0)
         representation = self.convnet(state).squeeze(dim=0)
@@ -65,6 +75,7 @@ class Worker(Agent, mp.Process):
                 action = np.random.choice(self.actions, size=None, replace=False, p=probs) # choose action with probability according to policy
                 # action = self.actions[idx]
 
+        self.last_act = policy, action
         return policy, action
 
     def train(self, Tmax, return_dict, clip_grads=True, render=False):
@@ -148,6 +159,7 @@ class Worker(Agent, mp.Process):
             #   pass
             share_gradients(self.valuenet, self.shared_value)
             share_gradients(self.policynet, self.shared_policy)
+            share_gradients(self.convnet, self.shared_conv)
             self.update_shared_nets()
 
         #print(f"storing results to {self.idx}-policyloss and {self.idx}-valueloss")
@@ -212,7 +224,9 @@ class Worker(Agent, mp.Process):
         if self.entropy:
             policy_loss += entropy * self.entropy_weight
         policy_loss = policy_loss # ** 2 # non-negative only
-        return policy_loss, value_loss, entropy
+        loss = policy_loss + value_loss
+#        return policy_loss, value_loss, entropy
+        return loss, loss, entropy
 
     def evaluate(self):
         print("Do not evaluate worker instances directly!")
@@ -220,9 +234,13 @@ class Worker(Agent, mp.Process):
     def _clip_gradients(self):
         clip_grad_norm_(self.policynet.parameters(),  self.grad_clip)
         clip_grad_norm_(self.valuenet.parameters(), self.grad_clip)
-        clip_grad_norm_(self.convnet.parameters(), self.grad_clip)
+#        clip_grad_norm_(self.convnet.parameters(), self.grad_clip)
 
     def update_shared_nets(self):
+        for idx, (name, param) in enumerate(self.shared_conv.named_parameters()):
+            if "BN" in name: continue
+            self.logq.put(LogEntry(LogType.HISTOGRAM, f"{self.name}/{name}-values", param.flatten().detach(), self.global_counter.value, {}))
+            self.logq.put(LogEntry(LogType.HISTOGRAM, f"{self.name}/{name}-grads", param.grad.flatten().detach(), self.global_counter.value, {}))
         self.shared_policy_optim.step()
         self.shared_value_optim.step()
         self.shared_conv_optim.step()

@@ -14,13 +14,13 @@ from neurips2019.util.Logger import Logger
 from A3C_configs import get_config
 
 # where to save logs
-SAVE_DIR = os.path.join("logs","A3C","cartpole_cnn")
+SAVE_DIR = os.path.join("logs","A3C","cartpole_7")
 
 # load saved weights
 valuenet_params = "value_weights"
 policynet_params = "policy_weights"
 convnet_params = "conv_weights"
-load_params = True
+load_params = False
 
 
 # initializes agent and runs training loop

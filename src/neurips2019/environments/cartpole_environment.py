@@ -6,18 +6,19 @@ from ..environments.environment import Environment
 
 class CartpoleEnv(Environment):
 
-    def __init__(self):
+    def __init__(self, size=(40,40)):
         Environment.__init__(self)
         self.env = gym.make('CartPole-v1')
         self.laststate = None
+        self.size = size
 
-    def step(self, action, image=False, size=(64,64), diff=True):
+    def step(self, action, image=False, diff=False):
         state, reward, done, _ =  self.env.step(action)
         if self.render:
             self.env.render(mode="human")
         if image:
             state = self.env.render(mode="rgb_array") # get state
-            state = self.resize(state, size) # resize to desired shape
+            state = self.resize(state, self.size) # resize to desired shape
         self.laststate = state
         if diff:
             state = state - self.laststate
@@ -26,13 +27,13 @@ class CartpoleEnv(Environment):
     def get_actionspace(self):
         return [0,1]
 
-    def reset(self, image=False, size=(64,64)):
+    def reset(self, image=False):
         state = self.env.reset()
         if self.render:
             self.env.render()
         if image:
             state = self.env.render(mode="rgb_array")
-            state = self.resize(state, size)
+            state = self.resize(state, self.size)
         self.laststate = state
         return state
 
