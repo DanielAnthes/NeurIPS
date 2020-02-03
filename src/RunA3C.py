@@ -1,14 +1,13 @@
-import pickle
+"""
+Main Entry point for the A3C algorithm. It loads a config file, and sets up the agent and runs the training and eval loop.
+"""
 import os
 import matplotlib.pyplot as plt
 from torch.multiprocessing import Queue
 from threading import Thread
 
-from neurips2019.environments.LunarLanderFactory import LunarLanderFactory
-from neurips2019.environments.CartpoleFactory import CartpoleFactory
 from neurips2019.agents.A3C import A3CAgent
-from neurips2019.agents.Networks import Net
-from neurips2019.util.utils import annealing, slow_annealing, save_network, load_network
+from neurips2019.util.utils import load_network
 from neurips2019.util.Logger import Logger
 
 from A3C_configs import get_config
@@ -16,22 +15,23 @@ from A3C_configs import get_config
 # where to save logs
 SAVE_DIR = os.path.join("logs","A3C","cartpole_4")
 
-# load saved weights
+# load saved weights if load_params is true
+load_params = False
 valuenet_params = os.path.join(SAVE_DIR, "checkpoint-0-valuenet.pt")
 policynet_params = os.path.join(SAVE_DIR, "checkpoint-0-policynet.pt")
 convnet_params = os.path.join(SAVE_DIR, "checkpoint-0-convnet.pt")
-load_params = False
 
 
 # initializes agent and runs training loop
 def main(config):
     """Trains and evaluates an A3C agent according to config"""
-    # set up logger with multiprocessing queue
     print(f"Saving logs to: {SAVE_DIR}")
+    # set up logger with multiprocessing queue
     queue = Queue()
     logger = Logger(SAVE_DIR, queue)
     # the main instance to run off
     agent = A3CAgent(config, queue)
+    # load old parameters
     if load_params:
         print("Loading parameters...")
         load_network(agent.policynet, policynet_params)

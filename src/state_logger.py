@@ -1,3 +1,4 @@
+"""Runs a random agent in a multiprocessed fashion to generate a multitude of states and save them for further processing"""
 import os
 from multiprocessing import Manager, Process
 

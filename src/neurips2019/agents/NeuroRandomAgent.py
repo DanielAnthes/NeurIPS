@@ -1,6 +1,5 @@
 from random import choice
 import numpy as np
-from neurips2019.preprocessing import neurosmash_state_processing
 
 from neurips2019.agents.agent import Agent
 

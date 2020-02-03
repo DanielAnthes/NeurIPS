@@ -1,6 +1,5 @@
-#%% Imports
+"""Trains an autoencoder on sample data from the NeuroSmash Environment"""
 import os
-import sys
 
 import numpy as np
 import torch
@@ -11,14 +10,17 @@ from torch.utils.tensorboard import SummaryWriter
 
 import neurips2019.preprocessing.state_autoencoder as state_autoencoder
 
+# hyper parameter
 batch_size = 256
 learning_rate = 0.005
 validation_split = 0.2
 log_path = os.path.join("logs", "AutoEncoder")
 CUDA = True
+epochs = 2
 
 
 def eval_loop():
+    """Runs validation on the autoencoder and writes to tensorboard"""
     print("Entering Eval Loop")
     autoencoder.eval()
     v_losses = 0
@@ -32,19 +34,19 @@ def eval_loop():
     writer.add_images("eval/decoded", decoded[1:5], gstep)
     writer.add_images("eval/screens", screens[1:5], gstep)
     autoencoder.train()
-    # torch.save(autoencoder, os.path.join(log_path, f"checkpoint-{gstep}"))
-    # print(f"Epoch ended with loss: {losses[-1]:.4f} || Avg Loss: {np.mean(losses):.4f}")
 
-
+# move to GPU
 if CUDA:
     torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
+# load data from specified folder
 p = os.path.join(os.getcwd(), "logs", "NeuroSmashStates", "run01", "full.npz")
 print(f"Loading Dataset from {p}")
-screenDataset = state_autoencoder.StateDataset(p)#('/neurips2019/preprocessing/states/states_RandomAgent_20191216_193356.npy', screensize=screensize)
+screenDataset = state_autoencoder.StateDataset(p)
 screensize = screenDataset[0].shape[0]
 print(f"Training on dataset of size: {len(screenDataset)}")
 
+# split dataset into train and validation and wrap in a sampler
 # https://stackoverflow.com/questions/50544730/how-do-i-split-a-custom-dataset-into-training-and-test-datasets
 indices = list(range(len(screenDataset)))
 np.random.shuffle(indices)
@@ -57,8 +59,10 @@ valid_sampler = SubsetRandomSampler(val_indices)
 train_dataloader = DataLoader(screenDataset, batch_size=batch_size, sampler=train_sampler)
 valid_dataloader = DataLoader(screenDataset, batch_size=batch_size, sampler=valid_sampler)
 
+# initalise tensorboard writer
 writer = SummaryWriter(log_path)
 
+# setup network
 autoencoder = state_autoencoder.AutoEncoder(screensize=screensize)
 if CUDA:
     cuda = torch.cuda.current_device()
@@ -67,12 +71,11 @@ optimizer = torch.optim.Adam(autoencoder.parameters(), lr=learning_rate)
 loss_func = nn.MSELoss()
 
 
-epochs = 2
-eval_time = len(train_dataloader) // 4
+eval_time = len(train_dataloader) // 4  # run evaluation four times per epoch
+gstep = 0  # globalstep
 
-gstep = 0
+# run epochs and train autoencoder
 for epoch in range(epochs):
-    # eval_loop()
     print(f"Starting Epoch {epoch+1}")
     losses = []
     for i_batch, screens in enumerate(train_dataloader):
@@ -89,16 +92,21 @@ for epoch in range(epochs):
 
         writer.add_scalar("train/loss", loss, gstep)
 
-        # l = loss.data.numpy()
-        # losses.append(l)
-        # perdec = i_batch / len(train_dataloader) * 10
-        # bar = f'{"#" * int(perdec):<9}'
-        # if len(bar) < 10:
-        #     bar += str(int((perdec * 10)) % 10)
-        # print(f"[{bar}] || Last Loss: {l:.4f}", end="\r", flush=True)
-        # print('Epoch: ', epoch, '| train loss: %.4f' % loss.data.numpy())
+        # print loss and overview to console if tensorboard is not used
+        if writer is None:
+            l = loss.data.numpy()
+            losses.append(l)
+            perdec = i_batch / len(train_dataloader) * 10
+            bar = f'{"#" * int(perdec):<9}'
+            if len(bar) < 10:
+                bar += str(int((perdec * 10)) % 10)
+            print(f"[{bar}] || Last Loss: {l:.4f}", end="\r", flush=True)
+            print('Epoch: ', epoch, '| train loss: %.4f' % loss.data.numpy())
+
+        # save a checkpoint every 100 steps
         if gstep % 100 == 0:
             torch.save(autoencoder, os.path.join(log_path, f"checkpoint-{gstep}"))
+        # Run evaluation
         if gstep % eval_time == 0:
             eval_loop()
 

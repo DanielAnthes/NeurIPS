@@ -1,10 +1,8 @@
+"""Implements a logger to be run in an extra thread to handle all tensorboard logging"""
+import os
 from collections import namedtuple
 from torch.utils.tensorboard import SummaryWriter
 from torch.multiprocessing import Queue
-import os
-import json
-import time
-import numpy as np
 from enum import Enum
 
 

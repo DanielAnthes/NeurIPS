@@ -4,7 +4,7 @@ from torch.multiprocessing import Value
 
 
 class EnvironmentFactory:
-
+    """Implements an interface for env factories used in A3C"""
     def __init__(self):
         self.num_instances = Value('i', 0)
 

@@ -1,3 +1,4 @@
+"""General image preprocessing functions"""
 import numpy as np
 
 def calculate_difference_image(img1, img2, tofloat=True):

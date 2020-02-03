@@ -1,6 +1,5 @@
 from collections import OrderedDict
 
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -49,11 +48,6 @@ class CNN(nn.Module):
 
     def __init__(self, outputs):
         super(CNN, self).__init__()
-#        self.conv1 = nn.Conv2d(3, 32, 3, stride=2, padding=1)
-#        self.conv2 = nn.Conv2d(32, 32, 3, stride=2, padding=1)
-#        self.conv3 = nn.Conv2d(32, 32, 3, stride=2, padding=1)
-#        self.conv4 = nn.Conv2d(32, 32, 3, stride=2, padding=1)
-#        self.head = nn.Linear(512, outputs)
         self.net = nn.Sequential()
         self.net.add_module("Conv_1", nn.Conv2d(3, 16, kernel_size=4, stride=2))
         self.net.add_module("BN_1", nn.BatchNorm2d(16))
@@ -64,23 +58,10 @@ class CNN(nn.Module):
         self.net.add_module("Flatten", Flatten())
         self.net.add_module("Readout", nn.Linear(1024, outputs))
         self.net.add_module("Act_3", nn.LeakyReLU())
-#        
-#        self.conv3 = nn.Conv2d(32, 32, kernel_size=4, stride=1)
-#        self.bn3 = nn.BatchNorm2d(32)
-        # self.head = nn.Linear(288, outputs) # NOTE This only works for input images of 64x64!
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
     def forward(self, x):
-#        x = F.elu(self.conv1(x))
-#        x = F.elu(self.conv2(x))
-#        x = F.elu(self.conv3(x))
-#        x = F.elu(self.conv4(x))
-#        x = F.relu(self.bn1(self.conv1(x)))
-#        x = F.relu(self.bn2(self.conv2(x)))
-#        x = F.relu(self.bn3(self.conv3(x)))
-#        x = x.view(x.size(0), -1)
-#        return self.head(x)
         return self.net(x)
 
 

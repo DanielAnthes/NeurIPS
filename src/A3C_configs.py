@@ -8,57 +8,21 @@ from neurips2019.environments.LunarLanderFactory import LunarLanderFactory
 from neurips2019.environments.CartpoleFactory import CartpoleFactory
 from neurips2019.environments.NeurosmashFactory import NeurosmashFactory
 from neurips2019.agents.Networks import Net, CNN, WideNet
-from neurips2019.util.Logger import Logger
 from neurips2019.util.utils import annealing, slow_annealing, linear_annealing
+
 
 # Shared hyperparameters
 NUM_THREADS = 16
-STATE_SIZE = (64, 64, 3)
+
 
 def get_config(env_name:str):
     """Convenience function to get config by string."""
     env = env_name.lower()
-    if env in ["lunarlander", "lunar lander", "lunar-lander-v2", "lunarlander-v2"]:
-        return get_lunar_lander_config()
-    elif env in ["cartpole", "cart pole", "cartpole-v1"]:
+    if env in ["cartpole", "cart pole", "cartpole-v1"]:
         return get_cartpole_config()
-    elif env in ["neurosmash", "neuro", "project", "umutsunmut"]:
+    elif env in ["neurosmash", "neuro", "project"]:
         return get_neuro_smash()
 
-def get_lunar_lander_config():
-    """
-    returns lunar lander config dict for A3C
-    """
-    def policy_net_lunar():
-        return Net(8,[32,32],4)
-    def value_net_lunar():
-        return Net(8, [32,32],1)
-    lunar_conf = {
-        "valuenet": value_net_lunar, # function returning a pytorch network to encode policy
-        "policynet": policy_net_lunar, # function returning a pytorch network to encode state values
-        "train_blocks": 1, # how often train is called
-        "block_size": 3000, # episodes per call to train
-        "num_workers": NUM_THREADS, # number of worker processes
-        "lookahead": 30, # steps to take before computing losses
-        "show_immediate": False, # show plots after each call to train
-        "keep_plots": True, # keep plots open after training has finished
-        "debug": False, # additional debug prints
-        "epsilon": annealing, # exploration strategy
-        "policy_lr": 0.00001, # learning rate for policy net optimizer
-        "value_lr": 0.00001, # learning rate for valuenet optimizer
-        "policy_decay": 0.0001, # weight decay for policy optimizer
-        "value_decay": 0.0001, # weight decay for value optimizer
-        "env": LunarLanderFactory(), # environment factory object
-        "evaluate": 50, # number of episodes to play for evaluation
-        "grad_clip": 1, # max norm for gradients, used to clip gradients
-        "gamma": 0.99, # discount for future rewards
-        "actions": [0,1,2,3], # actions allowed in the environment
-         "entropy": True, # minimize entropy as part of loss function
-        "entropy_weight": 10, # weight of entropy in loss function
-        "frameskip": 0
-   }
-
-    return lunar_conf
 
 def get_cartpole_config():
     """
@@ -101,7 +65,9 @@ def get_cartpole_config():
 
     return cartpole_conf
 
+
 def get_neuro_smash():
+    """ returns the config dict for the neurosmash env"""
     conv_out = 128
     def policy_net():
         return WideNet(conv_out, 32, 3)

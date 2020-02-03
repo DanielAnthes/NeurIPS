@@ -1,21 +1,18 @@
+"""Implements all classes and functions for the autoencoder"""
 from collections import OrderedDict, namedtuple
 
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
-import torchvision
-import cv2
-import matplotlib.pyplot as plt
+from torch.utils.data import Dataset
 import numpy as np
 from neurips2019.preprocessing.neurosmash_state_processing import state_to_screen
-import multiprocessing as mp
-from functools import partial
 
 
 current_batch = namedtuple("NumpyBatch", ("states", "indices"))
 
 
 class StateDataset(Dataset):
+    """A DataSet class to deal with the neurosmash states"""
     def __init__(self, states_file, screensize=None):
         """
         Args:
@@ -31,15 +28,10 @@ class StateDataset(Dataset):
                 screensize = int(np.sqrt(states.shape[-1] / 3))
             self.screensize = int(screensize)
 
-            # ToDo: Fix this executing main code?
-            # with mp.Pool() as p:
-            #     func = partial(state_to_screen, tofloat=True, outsize=self.screensize, asTensor=True)
-            #     screens = p.map(func, states)
             screens = []
             for i, s in enumerate(states):
                 screens.append(state_to_screen(s, tofloat=True, outsize=self.screensize))
 
-            # screens = np.array([state_to_screen(s, tofloat=True, outsize=self.screensize, asTensor=True) for s in states])
             self.screens = screens
 
         elif type(states) is np.lib.npyio.NpzFile:
@@ -66,19 +58,10 @@ class StateDataset(Dataset):
             screens = state_to_screen(items, tofloat=True, outsize=self.screensize)
             return torch.tensor(screens)
 
-    # def show(self, idx):
-    #     plt.imshow(self[idx])
-    #     plt.show()
-    #
-    # def show_empty(self):
-    #     plt.imshow(self.empty_screen)
-    #     plt.show()
-
 
 class Flatten(nn.Module):
     def forward(self, input):
         return input.view(input.size(0), -1)
-
 
 
 class Reshape(nn.Module):
@@ -110,13 +93,14 @@ class Unrollaxis(nn.Module):
 
 
 class AutoEncoder(nn.Module):
-
+    """Implements an Autoencoder Network"""
     def __init__(self, screensize=128):
+        """Init Network for the given screensize of states"""
         super(AutoEncoder, self).__init__()
 
         def calc_dim(dim, kernel_size, stride=1, padding=1, dilation=1):
+            """Conveience function to calculate dimensionality after convolution"""
             out = int(((dim + 2*padding - dilation*(kernel_size - 1)) // stride) + 0.5)
-            # print(dim, "-->", out)
             return out
 
         out_dim = screensize

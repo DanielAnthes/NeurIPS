@@ -1,8 +1,6 @@
+'''collection of utility functions that are reused and not necessarily specific to any particular algorithm'''
 import torch
 import numpy as np
-
-
-'''this file is intended to collect utility functions that are reused and not necessarily specific to any particular algorithm'''
 
 def share_weights(from_net, to_net):
     '''takes two pytorch networks and copies weights from the first to the second network'''
@@ -14,7 +12,6 @@ def share_gradients_old(from_net, to_net):
     '''
     copies gradients between networks
     https://discuss.pytorch.org/t/solved-copy-gradient-values/21731
-    TODO if asynchronous updating causes problems implement a lock to avoid simultaneous updates to the shared parameters (Note: at the moment this is done by aquiring a lock in the Worker before calling this function)
     '''
     for paramName, paramValue, in from_net.named_parameters():
         for netCopyName, netCopyValue, in to_net.named_parameters():

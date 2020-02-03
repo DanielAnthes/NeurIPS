@@ -1,15 +1,14 @@
+import itertools
+import numpy as np
+import matplotlib.pyplot as plt
 import torch
 from torch.optim import Adam, SGD, RMSprop
 import torch.nn.functional as F
 from torch.multiprocessing import Lock, Value, Process, Manager
+
 from neurips2019.agents.agent import Agent
 from neurips2019.agents.Worker import Worker
-import numpy as np
-import matplotlib.pyplot as plt
-from neurips2019.util.utils import annealing, slow_annealing
 from neurips2019.util.Logger import LogEntry, LogType
-import time
-import itertools
 
 # This class implements the Agent interface and the Asynchronous Actor Critic (A3C) algorithm described in "Asynchronous Methods for Deep Reinforcement Learning" (Mnih et al)
 # This main agent maintains the shared parameters and creates / manages the worker threads

@@ -7,18 +7,18 @@ from torch.nn.utils import clip_grad_norm_
 import numpy as np
 from neurips2019.agents.agent import Agent
 import torch.multiprocessing as mp
-from torch.utils.tensorboard import SummaryWriter
 from neurips2019.util.utils import share_weights, share_gradients
 from neurips2019.util.Logger import LogEntry, LogType
 from random import random, choice
-import os
 
 
 class Worker(Agent, mp.Process):
-# Instances of this class are created as separate processes to train the "main" a3c agent
-# extends the Agent interface as well as the pyTorch multiprocessing process class
+    """Instances of this class are created as separate processes to train the "main" a3c agent
+        It independently performs runs, routinely sharing its gradients and updating its weights
+        It extends the Agent interface as well as the pyTorch multiprocessing process class"""
 
     def __init__(self, entropy, entropy_weight, logq:mp.Queue, shared_policy, shared_value, shared_conv, shared_policy_optim, shared_value_optim, shared_conv_optim, global_counter, policynetfunc, valuenetfunc, convnetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99, frameskip=0):
+        """Gets passed all necessary parameters from the main agent instance"""
         self.env = env_factory.get_instance()
         self.name = f"worker-{idx:02d}"
         self.idx = idx
@@ -36,9 +36,6 @@ class Worker(Agent, mp.Process):
         self.shared_conv = shared_conv
         self.global_counter = global_counter
         self.shared_optim = shared_policy_optim
-        # self.shared_policy_optim = shared_policy_optim
-        # self.shared_value_optim = shared_value_optim
-        # self.shared_conv_optim = shared_conv_optim
         self.entropy = entropy
         self.entropy_weight = entropy_weight
         
@@ -53,8 +50,8 @@ class Worker(Agent, mp.Process):
 
         self.logq = logq
 
-
     def action(self, state):
+        """Generates a policy set and returns the chosen action and policy"""
         # perform frame skip
         if self.last_act is not None and self.fs_count < self.frameskip:
             self.fs_count += 1
@@ -80,7 +77,11 @@ class Worker(Agent, mp.Process):
         return policy, action
 
     def train(self, Tmax, return_dict, clip_grads=True, render=False):
-        # train loop: pulls current shared network, and performs actions in its own environment. Computes the gradients for its own networks and pushes them to the shared network which is then updated. Length of training is determined by a global counter that is incremented by all worker processes
+        """
+        train loop: pulls current shared network, and performs actions in its own environment.
+
+        Computes the gradients for its own networks and pushes them to the shared network which is then updated.
+        Length of training is determined by a global counter that is incremented by all worker processes"""
         print(f"{self.name}: Training started")
         value_losses = list()
         policy_losses = list()
@@ -148,22 +149,16 @@ class Worker(Agent, mp.Process):
 
             # compute gradients and update shared network
             policy_loss.backward(retain_graph=True) # retain graph as it is needed to backpropagate value_loss as well
-            # value_loss.backward(retain_graph=False) # now reset the graph to avoid accumulation over multiple iterations
 
             # clip gradients
             if clip_grads:
                 self._clip_gradients()
 
-            # make sure agents do not override each others gradients
-            # TODO maybe this is not needed
-            #with self.a3c_instance.lock: # at the moment a lock is acquired before workers update the shared net to avoid overriding gradients. For the agent to be truly 'asynchronous' this lock should be removed
-            #   pass
             share_gradients(self.valuenet, self.shared_value)
             share_gradients(self.policynet, self.shared_policy)
             share_gradients(self.convnet, self.shared_conv)
             self.update_shared_nets()
 
-        #print(f"storing results to {self.idx}-policyloss and {self.idx}-valueloss")
         return_dict[f"{self.idx}-policyloss"] = policy_losses
         return_dict[f"{self.idx}-valueloss"] = value_losses
         return_dict[f"{self.idx}-reward_ep"] = reward_eps
@@ -244,9 +239,3 @@ class Worker(Agent, mp.Process):
             self.logq.put(LogEntry(LogType.HISTOGRAM, f"{self.name}/{name}-grads", param.grad.flatten().detach(), self.global_counter.value, {}))
         self.shared_optim.step()
         self.shared_optim.zero_grad()
-        # self.shared_policy_optim.step()
-        # self.shared_value_optim.step()
-        # self.shared_conv_optim.step()
-        # self.shared_policy_optim.zero_grad()
-        # self.shared_value_optim.zero_grad()
-        # self.shared_conv_optim.zero_grad()

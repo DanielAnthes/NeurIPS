@@ -1,3 +1,4 @@
+"""Interface with the environment as given."""
 import numpy as np
 import socket
 from PIL import Image

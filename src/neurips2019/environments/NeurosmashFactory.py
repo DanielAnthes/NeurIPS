@@ -1,3 +1,4 @@
+"""Factory to produce envs for several parallel neurosmash instances increasing ports by one each time"""
 from neurips2019.environments.EnvironmentFactory import EnvironmentFactory
 from neurips2019.environments.neurosmash_environment import NeurosmashEnvironment
 
@@ -6,6 +7,7 @@ class NeurosmashFactory(EnvironmentFactory):
     def __init__(self, ip="127.0.0.1", port=8000, size=64, timescale=1):
         super().__init__()
         self.ip = ip
+
         self.port = port
         self.size = size
         self.timescale = timescale
