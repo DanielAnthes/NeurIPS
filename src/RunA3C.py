@@ -14,12 +14,12 @@ from neurips2019.util.Logger import Logger
 from A3C_configs import get_config
 
 # where to save logs
-SAVE_DIR = os.path.join("logs","A3C","cartpole_7")
+SAVE_DIR = os.path.join("logs","A3C","cartpole_4")
 
 # load saved weights
-valuenet_params = "value_weights"
-policynet_params = "policy_weights"
-convnet_params = "conv_weights"
+valuenet_params = os.path.join(SAVE_DIR, "checkpoint-0-valuenet.pt")
+policynet_params = os.path.join(SAVE_DIR, "checkpoint-0-policynet.pt")
+convnet_params = os.path.join(SAVE_DIR, "checkpoint-0-convnet.pt")
 load_params = False
 
 
@@ -51,6 +51,7 @@ def main(config):
             # training process
             result_dict = agent.train(config["block_size"]*(i+1), config["num_workers"], show_plots=False, render=False)
             # evaluation
+            print(">> Starting Evaluation")
             agent.evaluate(config["evaluate"], render=False, show_plots=False)
 
             # save checkpoint
@@ -65,13 +66,6 @@ def main(config):
         # stop and close logger
         queue.put(None)
         log_thread.join()
-
-        # save weights
-        print("Saving weights...")
-        save_network(agent.policynet, "policy_weights")
-        save_network(agent.valuenet, "value_weights")
-        save_network(agent.convnet, "conv_weights")
-        print("done.")
 
     except KeyboardInterrupt as e:
         # if interrupt collect thread first

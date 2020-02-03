@@ -35,9 +35,10 @@ class Worker(Agent, mp.Process):
         self.shared_value = shared_value
         self.shared_conv = shared_conv
         self.global_counter = global_counter
-        self.shared_policy_optim = shared_policy_optim
-        self.shared_value_optim = shared_value_optim
-        self.shared_conv_optim = shared_conv_optim
+        self.shared_optim = shared_policy_optim
+        # self.shared_policy_optim = shared_policy_optim
+        # self.shared_value_optim = shared_value_optim
+        # self.shared_conv_optim = shared_conv_optim
         self.entropy = entropy
         self.entropy_weight = entropy_weight
         
@@ -134,20 +135,20 @@ class Worker(Agent, mp.Process):
             else:
                 R = self._get_value(state) # bootstrap reward from value of last known state
 
-            policy_loss, value_loss, entropy = self.calc_loss(states, actions, rewards, R)
+            policy_loss, entropy = self.calc_loss(states, actions, rewards, R)
             pl = policy_loss.detach().numpy()[0]
             policy_losses.append(pl)
-            vl = value_loss.detach().numpy()[0]
+            # vl = value_loss.detach().numpy()[0]
             e = entropy.detach().numpy()[0]
-            value_losses.append(vl)
+            # value_losses.append(vl)
             self.logq.put(LogEntry(LogType.SCALAR, f"policy-loss/{self.name}", pl, self.global_counter.value, {}))
-            self.logq.put(LogEntry(LogType.SCALAR, f"value-loss/{self.name}", vl, self.global_counter.value, {}))
+            # self.logq.put(LogEntry(LogType.SCALAR, f"value-loss/{self.name}", vl, self.global_counter.value, {}))
             self.logq.put(LogEntry(LogType.SCALAR, f"entropy/{self.name}", e, self.global_counter.value, {}))
             self.logq.put(LogEntry(LogType.SCALAR, f"epsilon", self.epsilon(self.global_counter.value), self.global_counter.value, {}))
 
             # compute gradients and update shared network
             policy_loss.backward(retain_graph=True) # retain graph as it is needed to backpropagate value_loss as well
-            value_loss.backward(retain_graph=False) # now reset the graph to avoid accumulation over multiple iterations
+            # value_loss.backward(retain_graph=False) # now reset the graph to avoid accumulation over multiple iterations
 
             # clip gradients
             if clip_grads:
@@ -226,7 +227,7 @@ class Worker(Agent, mp.Process):
         policy_loss = policy_loss # ** 2 # non-negative only
         loss = policy_loss + value_loss
 #        return policy_loss, value_loss, entropy
-        return loss, loss, entropy
+        return loss, entropy
 
     def evaluate(self):
         print("Do not evaluate worker instances directly!")
@@ -241,9 +242,11 @@ class Worker(Agent, mp.Process):
             if "BN" in name: continue
             self.logq.put(LogEntry(LogType.HISTOGRAM, f"{self.name}/{name}-values", param.flatten().detach(), self.global_counter.value, {}))
             self.logq.put(LogEntry(LogType.HISTOGRAM, f"{self.name}/{name}-grads", param.grad.flatten().detach(), self.global_counter.value, {}))
-        self.shared_policy_optim.step()
-        self.shared_value_optim.step()
-        self.shared_conv_optim.step()
-        self.shared_policy_optim.zero_grad()
-        self.shared_value_optim.zero_grad()
-        self.shared_conv_optim.zero_grad()
+        self.shared_optim.step()
+        self.shared_optim.zero_grad()
+        # self.shared_policy_optim.step()
+        # self.shared_value_optim.step()
+        # self.shared_conv_optim.step()
+        # self.shared_policy_optim.zero_grad()
+        # self.shared_value_optim.zero_grad()
+        # self.shared_conv_optim.zero_grad()

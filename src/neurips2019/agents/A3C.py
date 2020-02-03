@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from neurips2019.util.utils import annealing, slow_annealing
 from neurips2019.util.Logger import LogEntry, LogType
 import time
-
+import itertools
 
 # This class implements the Agent interface and the Asynchronous Actor Critic (A3C) algorithm described in "Asynchronous Methods for Deep Reinforcement Learning" (Mnih et al)
 # This main agent maintains the shared parameters and creates / manages the worker threads
@@ -60,9 +60,10 @@ class A3CAgent(Agent):
         self.tmax = config["lookahead"] # maximum lookahead
 
         # optimizers
-        self.policy_optim = RMSprop(self.policynet.parameters(), lr=config["policy_lr"], weight_decay=config["policy_decay"])
-        self.value_optim = RMSprop(self.valuenet.parameters(), lr=config["value_lr"], weight_decay=config["value_decay"])
-        self.conv_optim = RMSprop(self.convnet.parameters(), lr=config["conv_lr"], weight_decay=config["conv_decay"])
+        params = [self.convnet.parameters(), self.policynet.parameters(), self.valuenet.parameters()]
+        self.policy_optim = Adam(itertools.chain(*params), lr=config["policy_lr"], weight_decay=config["policy_decay"])
+        # self.value_optim = RMSprop(self.valuenet.parameters(), lr=config["value_lr"], weight_decay=config["value_decay"])
+        # self.conv_optim = RMSprop(self.convnet.parameters(), lr=config["conv_lr"], weight_decay=config["conv_decay"])
 
         self.global_counter = Value('i', 0) # global episode counter
         self.env_factory = config["env"]
@@ -111,9 +112,9 @@ class A3CAgent(Agent):
                     self.policynet, 
                     self.valuenet, 
                     self.convnet, 
-                    self.policy_optim, 
-                    self.value_optim, 
-                    self.conv_optim, 
+                    self.policy_optim,
+                    None, # self.value_optim,
+                    None, # self.conv_optim,
                     self.global_counter, 
                     self.policynetfunc, 
                     self.valuenetfunc, 
@@ -246,6 +247,7 @@ class A3CAgent(Agent):
         """
         torch.save(self.policynet.state_dict(), f"{name}-policynet.pt")
         torch.save(self.valuenet.state_dict(), f"{name}-valuenet.pt")
+        torch.save(self.convnet.state_dict(), f"{name}-convnet.pt")
 
     def load_model(self, name):
         """ restores parameters of the policynet and valuenet from a file

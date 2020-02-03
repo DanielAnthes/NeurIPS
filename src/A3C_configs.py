@@ -12,7 +12,7 @@ from neurips2019.util.Logger import Logger
 from neurips2019.util.utils import annealing, slow_annealing, linear_annealing
 
 # Shared hyperparameters
-NUM_THREADS = 20
+NUM_THREADS = 16
 STATE_SIZE = (64, 64, 3)
 
 def get_config(env_name:str):
@@ -64,7 +64,7 @@ def get_cartpole_config():
     """
     returns cartpole config dict for A3C
     """
-    conv_out = 32
+    conv_out = 64
     def policy_net_cp():
         return Net(conv_out, 2)
     def value_net_cp():
@@ -78,20 +78,20 @@ def get_cartpole_config():
         "train_blocks": 1, # how often train is called
         "block_size": 3000, # episodes per call to train
         "num_workers": NUM_THREADS, # number of worker processes
-        "lookahead": 30, # steps to take before computing losses
+        "lookahead": 10, # steps to take before computing losses
         "show_immediate": False, # show plots after each call to train
         "keep_plots": True, # keep plots open after training has finished
         "debug": False, # additional debug prints
         "epsilon": annealing, # exploration strategy
-        "policy_lr": 0.0002, # learning rate for policy net optimizer
+        "policy_lr": 0.01, # learning rate for policy net optimizer
         "value_lr": 0.0002, # learning rate for valuenet optimizer
         "conv_lr": 0.05, # learning rate for convnet
-        "policy_decay": 0.0001, # weight decay for policy optimizer
+        "policy_decay": 0.01, # weight decay for policy optimizer
         "value_decay": 0.0001, # weight decay for value optimizer
         "conv_decay": 0.0001, # weight decay for convnet
         "env": CartpoleFactory(), # environment factory object
         "evaluate": 50, # number of episodes to play for evaluation
-        "grad_clip": 1, # max norm for gradients, used to clip gradients
+        "grad_clip": 10000000000, # max norm for gradients, used to clip gradients
         "gamma": 0.99, # discount for future rewards
         "actions": [0,1], # actions allowed in the environment
         "entropy": False, # minimize entropy as part of loss function

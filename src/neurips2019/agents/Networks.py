@@ -14,7 +14,7 @@ class Net(nn.Module):
         self.fc1 = nn.Linear(num_in, num_out)
 
     def forward(self, x):
-        return torch.sigmoid(self.fc1(x))
+        return F.relu(self.fc1(x))
 
 
 class WideNet(nn.Module):
@@ -56,14 +56,14 @@ class CNN(nn.Module):
 #        self.head = nn.Linear(512, outputs)
         self.net = nn.Sequential()
         self.net.add_module("Conv_1", nn.Conv2d(3, 16, kernel_size=4, stride=2))
-#        self.net.add_module("BN_1", nn.BatchNorm2d(16))
-        self.net.add_module("Act_1", nn.SELU())
-        self.net.add_module("Conv_2", nn.Conv2d(16, 16, kernel_size=4, stride=4))
-#        self.net.add_module("BN_2", nn.BatchNorm2d(32))
-        self.net.add_module("Act_2", nn.SELU())
+        self.net.add_module("BN_1", nn.BatchNorm2d(16))
+        self.net.add_module("Act_1", nn.LeakyReLU())
+        self.net.add_module("Conv_2", nn.Conv2d(16, 16, kernel_size=4, stride=2))
+        self.net.add_module("BN_2", nn.BatchNorm2d(16))
+        self.net.add_module("Act_2", nn.LeakyReLU())
         self.net.add_module("Flatten", Flatten())
-        self.net.add_module("Readout", nn.Linear(256, outputs))
-#        self.net.add_module("Act_3", nn.Tanh())
+        self.net.add_module("Readout", nn.Linear(1024, outputs))
+        self.net.add_module("Act_3", nn.LeakyReLU())
 #        
 #        self.conv3 = nn.Conv2d(32, 32, kernel_size=4, stride=1)
 #        self.bn3 = nn.BatchNorm2d(32)
