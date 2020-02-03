@@ -20,6 +20,8 @@ def state_to_screen(state, size=None, outsize=None, tofloat=True, norm=False, gr
         if type(state) is list:
             state = np.array(state)
         size = np.int(np.sqrt(state.shape[-1] / 3))
+    if not outsize:
+        outsize = size
 
     scaler = lambda x: _scale_to_int(x, size, 768)
     screen = np.reshape(state, (size, size, 3)).astype(np.uint8)

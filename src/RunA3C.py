@@ -8,13 +8,21 @@ from neurips2019.environments.LunarLanderFactory import LunarLanderFactory
 from neurips2019.environments.CartpoleFactory import CartpoleFactory
 from neurips2019.agents.A3C import A3CAgent
 from neurips2019.agents.Networks import Net
-from neurips2019.util.utils import annealing, slow_annealing
+from neurips2019.util.utils import annealing, slow_annealing, save_network, load_network
 from neurips2019.util.Logger import Logger
 
 from A3C_configs import get_config
 
 # where to save logs
-SAVE_DIR = os.path.join("logs","A3C","cartpole_1")
+SAVE_DIR = os.path.join("logs","A3C","cartpole_4")
+
+# load saved weights
+valuenet_params = os.path.join(SAVE_DIR, "checkpoint-0-valuenet.pt")
+policynet_params = os.path.join(SAVE_DIR, "checkpoint-0-policynet.pt")
+convnet_params = os.path.join(SAVE_DIR, "checkpoint-0-convnet.pt")
+load_params = False
+
+
 # initializes agent and runs training loop
 def main(config):
     """Trains and evaluates an A3C agent according to config"""
@@ -24,6 +32,12 @@ def main(config):
     logger = Logger(SAVE_DIR, queue)
     # the main instance to run off
     agent = A3CAgent(config, queue)
+    if load_params:
+        print("Loading parameters...")
+        load_network(agent.policynet, policynet_params)
+        load_network(agent.valuenet, valuenet_params)
+        load_network(agent.convnet, convnet_params)
+        print("done.")
 
     # create logging thread
     log_thread = Thread(target=logger.run, name="logger")
@@ -37,6 +51,7 @@ def main(config):
             # training process
             result_dict = agent.train(config["block_size"]*(i+1), config["num_workers"], show_plots=False, render=False)
             # evaluation
+            print(">> Starting Evaluation")
             agent.evaluate(config["evaluate"], render=False, show_plots=False)
 
             # save checkpoint
@@ -51,6 +66,7 @@ def main(config):
         # stop and close logger
         queue.put(None)
         log_thread.join()
+
     except KeyboardInterrupt as e:
         # if interrupt collect thread first
         queue.put(None)
