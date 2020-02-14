@@ -2,11 +2,12 @@ from collections import OrderedDict
 
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.models as models
 
 
 class Net(nn.Module):
     """
-    Implements a simple fully connected network 
+    Implements a simple fully connected network
     """
     def __init__(self, num_in, num_out):
         super(Net, self).__init__()
@@ -68,3 +69,17 @@ class CNN(nn.Module):
 class Flatten(nn.Module):
     def forward(self, input):
         return input.view(input.size(0), -1)
+
+class PretrainedResNet(nn.Module):
+    def __init__(self, outputs):
+        super(PretrainedResNet, self).__init__()
+        resnet = models.resnet18(pretrained=True)
+        for param in resnet.parameters():
+            param.requires_grad = False # freeze parameters
+        self.net = nn.Sequential(*list(resnet.children())[:-14]) # only take first 4 conv layers
+        self.net.add_module("Flatten", Flatten())
+        self.net.add_module("FC1", nn.Linear(4800, 1024))
+        self.net.add_module("Readout", nn.Linear(1024, outputs))
+
+    def forward(self, x):
+        return self.net(x)

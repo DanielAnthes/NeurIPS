@@ -59,7 +59,7 @@ class A3CAgent(Agent):
         self.tmax = config["lookahead"] # maximum lookahead
 
         # optimizers
-        params = [self.convnet.parameters(), self.policynet.parameters(), self.valuenet.parameters()]
+        params = [self.convnet.parameters(), self.policynet.parameters(), self.valuenet.parameters()] # using a pretrained CNN here, convolutional layers are frozen
         self.policy_optim = Adam(itertools.chain(*params), lr=config["policy_lr"], weight_decay=config["policy_decay"])
         # self.value_optim = RMSprop(self.valuenet.parameters(), lr=config["value_lr"], weight_decay=config["value_decay"])
         # self.conv_optim = RMSprop(self.convnet.parameters(), lr=config["conv_lr"], weight_decay=config["conv_decay"])
@@ -105,26 +105,26 @@ class A3CAgent(Agent):
         processes = list()
         for i in range(num_processes):
             worker = Worker(
-                    self.config["entropy"], 
-                    self.config["entropy_weight"], 
-                    self.logq, 
-                    self.policynet, 
-                    self.valuenet, 
-                    self.convnet, 
+                    self.config["entropy"],
+                    self.config["entropy_weight"],
+                    self.logq,
+                    self.policynet,
+                    self.valuenet,
+                    self.convnet,
                     self.policy_optim,
                     None, # self.value_optim,
                     None, # self.conv_optim,
-                    self.global_counter, 
-                    self.policynetfunc, 
-                    self.valuenetfunc, 
-                    self.convnetfunc, 
-                    self.tmax, 
-                    self.config["epsilon"], 
-                    self.env_factory, 
-                    self.actions, 
-                    i, 
-                    self.config["grad_clip"], 
-                    self.config["gamma"], 
+                    self.global_counter,
+                    self.policynetfunc,
+                    self.valuenetfunc,
+                    self.convnetfunc,
+                    self.tmax,
+                    self.config["epsilon"],
+                    self.env_factory,
+                    self.actions,
+                    i,
+                    self.config["grad_clip"],
+                    self.config["gamma"],
                     self.config["frameskip"]
                     )
             processes.append(Process(target=worker.train, args=(Tmax,return_dict, False, render)))
@@ -176,7 +176,7 @@ class A3CAgent(Agent):
 
         Args:
             state: current state of the environment
-            
+
 
         Returns:
             policy: policy values for all actions in this state

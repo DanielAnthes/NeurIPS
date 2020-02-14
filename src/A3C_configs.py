@@ -7,12 +7,14 @@ Use this file to change the configs or create new ones (and if possible link the
 from neurips2019.environments.LunarLanderFactory import LunarLanderFactory
 from neurips2019.environments.CartpoleFactory import CartpoleFactory
 from neurips2019.environments.NeurosmashFactory import NeurosmashFactory
-from neurips2019.agents.Networks import Net, CNN, WideNet
+from neurips2019.agents.Networks import Net, CNN, WideNet, PretrainedResNet
 from neurips2019.util.utils import annealing, slow_annealing, linear_annealing
+import torch.nn as nn
+
 
 
 # Shared hyperparameters
-NUM_THREADS = 16
+NUM_THREADS = 4
 
 
 def get_config(env_name:str):
@@ -35,12 +37,16 @@ def get_cartpole_config():
         return Net(conv_out, 1)
     def conv_net_cp():
         return CNN(conv_out)
+    def resnet_cp():
+        return PretrainedResNet(conv_out)
+
+
     cartpole_conf = {
         "valuenet": value_net_cp, # function returning a pytorch network to encode policy
         "policynet": policy_net_cp, # function returning a pytorch network to encode state values
-        "convnet": conv_net_cp, # function returning a pytorch network to process image input states
+        "convnet": resnet_cp, # function returning a pytorch network to process image input states
         "train_blocks": 1, # how often train is called
-        "block_size": 3000, # episodes per call to train
+        "block_size": 1000, # episodes per call to train
         "num_workers": NUM_THREADS, # number of worker processes
         "lookahead": 10, # steps to take before computing losses
         "show_immediate": False, # show plots after each call to train
