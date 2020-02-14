@@ -13,7 +13,7 @@ from neurips2019.util.Logger import Logger
 from A3C_configs import get_config
 
 # where to save logs
-SAVE_DIR = os.path.join("logs","A3C","cartpole_4")
+SAVE_DIR = os.path.join("logs","A3C","cartpole_res2")
 
 # load saved weights if load_params is true
 load_params = False
