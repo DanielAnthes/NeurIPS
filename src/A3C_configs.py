@@ -14,7 +14,7 @@ import torch.nn as nn
 
 
 # Shared hyperparameters
-NUM_THREADS = 4
+NUM_THREADS = 6
 
 
 def get_config(env_name:str):
@@ -46,7 +46,7 @@ def get_cartpole_config():
         "policynet": policy_net_cp, # function returning a pytorch network to encode state values
         "convnet": resnet_cp, # function returning a pytorch network to process image input states
         "train_blocks": 1, # how often train is called
-        "block_size": 5000, # episodes per call to train
+        "block_size": 3000, # episodes per call to train
         "num_workers": NUM_THREADS, # number of worker processes
         "lookahead": 10, # steps to take before computing losses
         "show_immediate": False, # show plots after each call to train

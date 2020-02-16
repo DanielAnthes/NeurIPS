@@ -60,10 +60,8 @@ class A3CAgent(Agent):
 
         # optimizers
         params = [self.convnet.parameters(), self.policynet.parameters(), self.valuenet.parameters()] # using a pretrained CNN here, convolutional layers are frozen
-        self.policy_optim = Adam(itertools.chain(*params), lr=config["policy_lr"], weight_decay=config["policy_decay"])
-        # self.value_optim = RMSprop(self.valuenet.parameters(), lr=config["value_lr"], weight_decay=config["value_decay"])
-        # self.conv_optim = RMSprop(self.convnet.parameters(), lr=config["conv_lr"], weight_decay=config["conv_decay"])
-
+        self.optim = Adam(itertools.chain(*params), lr=config["policy_lr"], weight_decay=config["policy_decay"])
+        
         self.global_counter = Value('i', 0) # global episode counter
         self.env_factory = config["env"]
         self.actions = config["actions"]
@@ -111,9 +109,7 @@ class A3CAgent(Agent):
                     self.policynet,
                     self.valuenet,
                     self.convnet,
-                    self.policy_optim,
-                    None, # self.value_optim,
-                    None, # self.conv_optim,
+                    self.optim,
                     self.global_counter,
                     self.policynetfunc,
                     self.valuenetfunc,
@@ -163,12 +159,8 @@ class A3CAgent(Agent):
         Additionally logs the weights of the networks before each update and resets the gradients to zero after updating
         """
         # update networks with gradients from worker processes and reset gradients after
-        self.policy_optim.step()
-        self.value_optim.step()
-        self.conv_optim.step()
-        self.policy_optim.zero_grad()
-        self.value_optim.zero_grad()
-        self.conv_optim.zero_grad()
+        self.optim.step()
+        self.optim.zero_grad()
 
     def action(self, state):
         """

@@ -17,7 +17,7 @@ class Worker(Agent, mp.Process):
         It independently performs runs, routinely sharing its gradients and updating its weights
         It extends the Agent interface as well as the pyTorch multiprocessing process class"""
 
-    def __init__(self, entropy, entropy_weight, logq:mp.Queue, shared_policy, shared_value, shared_conv, shared_policy_optim, shared_value_optim, shared_conv_optim, global_counter, policynetfunc, valuenetfunc, convnetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99, frameskip=0):
+    def __init__(self, entropy, entropy_weight, logq:mp.Queue, shared_policy, shared_value, shared_conv, shared_optim, global_counter, policynetfunc, valuenetfunc, convnetfunc, tmax, expl_policy, env_factory, actions, idx, grad_clip=40, gamma=0.99, frameskip=0):
         """Gets passed all necessary parameters from the main agent instance"""
         self.env = env_factory.get_instance()
         self.name = f"worker-{idx:02d}"
@@ -35,10 +35,10 @@ class Worker(Agent, mp.Process):
         self.shared_value = shared_value
         self.shared_conv = shared_conv
         self.global_counter = global_counter
-        self.shared_optim = shared_policy_optim
+        self.shared_optim = shared_optim
         self.entropy = entropy
         self.entropy_weight = entropy_weight
-        
+
         self.frameskip = frameskip
         self.fs_count = 0
         self.last_act = None
@@ -59,10 +59,10 @@ class Worker(Agent, mp.Process):
         # if frame skip is reached, reset counter
         self.fs_count = 0
         # performs action according to policy, or at random with probability determined by epsilon greedy strategy
-        state = torch.FloatTensor(state).unsqueeze(dim=0)
-        representation = self.convnet(state).squeeze(dim=0)
-        policy = self.policynet(representation)
         with torch.no_grad(): # only save gradient information when calculating the loss TODO: possible source of screwups
+            state = torch.FloatTensor(state).unsqueeze(dim=0)
+            representation = self.convnet(state).squeeze(dim=0)
+            policy = self.policynet(representation)
             eps = self.epsilon(self.global_counter.value)
             if random() < eps:
                 action = choice(self.actions)
@@ -83,8 +83,7 @@ class Worker(Agent, mp.Process):
         Computes the gradients for its own networks and pushes them to the shared network which is then updated.
         Length of training is determined by a global counter that is incremented by all worker processes"""
         print(f"{self.name}: Training started")
-        value_losses = list()
-        policy_losses = list()
+        losses = list()
         reward_eps = list()
         reward_ep = 0
         state = self.env.reset(image=True) # reset environment
@@ -100,6 +99,7 @@ class Worker(Agent, mp.Process):
             # copy weights from shared net
             share_weights(self.shared_policy, self.policynet)
             share_weights(self.shared_value, self.valuenet)
+            share_weights(self.shared_conv, self.convnet)
 
             states = list()
             actions = list()
@@ -136,19 +136,19 @@ class Worker(Agent, mp.Process):
             else:
                 R = self._get_value(state) # bootstrap reward from value of last known state
 
-            policy_loss, entropy = self.calc_loss(states, actions, rewards, R)
-            pl = policy_loss.detach().numpy()[0]
-            policy_losses.append(pl)
+            loss, entropy = self.calc_loss(states, actions, rewards, R)
+            l = loss.detach().numpy()[0]
+            losses.append(l)
             # vl = value_loss.detach().numpy()[0]
             e = entropy.detach().numpy()[0]
             # value_losses.append(vl)
-            self.logq.put(LogEntry(LogType.SCALAR, f"policy-loss/{self.name}", pl, self.global_counter.value, {}))
+            self.logq.put(LogEntry(LogType.SCALAR, f"loss/{self.name}", l, self.global_counter.value, {}))
             # self.logq.put(LogEntry(LogType.SCALAR, f"value-loss/{self.name}", vl, self.global_counter.value, {}))
             self.logq.put(LogEntry(LogType.SCALAR, f"entropy/{self.name}", e, self.global_counter.value, {}))
             self.logq.put(LogEntry(LogType.SCALAR, f"epsilon", self.epsilon(self.global_counter.value), self.global_counter.value, {}))
 
             # compute gradients and update shared network
-            policy_loss.backward(retain_graph=True) # retain graph as it is needed to backpropagate value_loss as well
+            loss.backward(retain_graph=False) # no need to retain graph here anymore as the loss is now combined value + policy loss
 
             # clip gradients
             if clip_grads:
@@ -159,7 +159,7 @@ class Worker(Agent, mp.Process):
             share_gradients(self.convnet, self.shared_conv)
             self.update_shared_nets()
 
-        return_dict[f"{self.idx}-policyloss"] = policy_losses
+        return_dict[f"{self.idx}-policyloss"] = losses
         return_dict[f"{self.idx}-valueloss"] = value_losses
         return_dict[f"{self.idx}-reward_ep"] = reward_eps
 
