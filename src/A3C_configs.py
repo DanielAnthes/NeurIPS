@@ -7,14 +7,14 @@ Use this file to change the configs or create new ones (and if possible link the
 from neurips2019.environments.LunarLanderFactory import LunarLanderFactory
 from neurips2019.environments.CartpoleFactory import CartpoleFactory
 from neurips2019.environments.NeurosmashFactory import NeurosmashFactory
-from neurips2019.agents.Networks import Net, CNN, WideNet, PretrainedResNet
+from neurips2019.agents.Networks import Net, CNN, WideNet, PretrainedResNet, PretrainedSqueezeNet
 from neurips2019.util.utils import annealing, slow_annealing, linear_annealing
 import torch.nn as nn
 
 
 
 # Shared hyperparameters
-NUM_THREADS = 6
+NUM_THREADS = 4
 
 
 def get_config(env_name:str):
@@ -39,29 +39,27 @@ def get_cartpole_config():
         return CNN(conv_out)
     def resnet_cp():
         return PretrainedResNet(conv_out)
+    def squeeze_cp():
+        return PretrainedSqueezeNet(conv_out)
 
 
     cartpole_conf = {
         "valuenet": value_net_cp, # function returning a pytorch network to encode policy
         "policynet": policy_net_cp, # function returning a pytorch network to encode state values
-        "convnet": resnet_cp, # function returning a pytorch network to process image input states
+        "convnet": squeeze_cp, # function returning a pytorch network to process image input states
         "train_blocks": 1, # how often train is called
-        "block_size": 3000, # episodes per call to train
+        "block_size": 5000, # episodes per call to train
         "num_workers": NUM_THREADS, # number of worker processes
         "lookahead": 10, # steps to take before computing losses
         "show_immediate": False, # show plots after each call to train
         "keep_plots": True, # keep plots open after training has finished
         "debug": False, # additional debug prints
         "epsilon": annealing, # exploration strategy
-        "policy_lr": 0.01, # learning rate for policy net optimizer
-        "value_lr": 0.0002, # learning rate for valuenet optimizer
-        "conv_lr": 0.05, # learning rate for convnet
-        "policy_decay": 0.01, # weight decay for policy optimizer
-        "value_decay": 0.0001, # weight decay for value optimizer
-        "conv_decay": 0.0001, # weight decay for convnet
+        "lr": 0.01, # learning rate for policy net optimizer
+        "decay": 0.0001, # weight decay for convnet
         "env": CartpoleFactory(), # environment factory object
         "evaluate": 50, # number of episodes to play for evaluation
-        "grad_clip": 10000000000, # max norm for gradients, used to clip gradients
+        "grad_clip": 10, # max norm for gradients, used to clip gradients
         "gamma": 0.99, # discount for future rewards
         "actions": [0,1], # actions allowed in the environment
         "entropy": False, # minimize entropy as part of loss function

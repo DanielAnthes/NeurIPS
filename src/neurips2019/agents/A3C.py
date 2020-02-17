@@ -60,8 +60,8 @@ class A3CAgent(Agent):
 
         # optimizers
         params = [self.convnet.parameters(), self.policynet.parameters(), self.valuenet.parameters()] # using a pretrained CNN here, convolutional layers are frozen
-        self.optim = Adam(itertools.chain(*params), lr=config["policy_lr"], weight_decay=config["policy_decay"])
-        
+        self.optim = Adam(itertools.chain(*params), lr=config["lr"], weight_decay=config["decay"])
+
         self.global_counter = Value('i', 0) # global episode counter
         self.env_factory = config["env"]
         self.actions = config["actions"]

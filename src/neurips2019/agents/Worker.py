@@ -233,9 +233,8 @@ class Worker(Agent, mp.Process):
 #        clip_grad_norm_(self.convnet.parameters(), self.grad_clip)
 
     def update_shared_nets(self):
-        for idx, (name, param) in enumerate(self.shared_conv.named_parameters()):
-            if "BN" in name: continue
-            self.logq.put(LogEntry(LogType.HISTOGRAM, f"{self.name}/{name}-values", param.flatten().detach(), self.global_counter.value, {}))
-            self.logq.put(LogEntry(LogType.HISTOGRAM, f"{self.name}/{name}-grads", param.grad.flatten().detach(), self.global_counter.value, {}))
+        # for idx, (name, param) in enumerate(self.shared_conv.named_parameters()):
+        #     self.logq.put(LogEntry(LogType.HISTOGRAM, f"{self.name}/{name}-values", param.flatten().detach(), self.global_counter.value, {}))
+        #     self.logq.put(LogEntry(LogType.HISTOGRAM, f"{self.name}/{name}-grads", param.grad.flatten().detach(), self.global_counter.value, {}))
         self.shared_optim.step()
         self.shared_optim.zero_grad()

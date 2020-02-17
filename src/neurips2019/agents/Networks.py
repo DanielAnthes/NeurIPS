@@ -82,3 +82,16 @@ class PretrainedResNet(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+
+class PretrainedSqueezeNet(nn.Module):
+    def __init__(self, outputs):
+        super(PretrainedSqueezeNet, self).__init__()
+        squeezenet = models.squeezenet1_1(pretrained=True)
+        for param in squeezenet.parameters():
+            param.requires_grad = False # freeze parameters
+        self.net = nn.Sequential(*list(squeezenet.children())[:-1]) # exclude output layer
+        self.net.add_module("Flatten", Flatten())
+        self.net.add_module("Readout", nn.Linear(2048, outputs))
+
+    def forward(self, x):
+        return self.net(x)
