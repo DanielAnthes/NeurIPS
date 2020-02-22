@@ -1,4 +1,4 @@
-from utils import resize
+from utils import resize, get_state
 import numpy as np
 import gym
 import torch
@@ -49,15 +49,13 @@ class A3C:
         for i in range(num_eps):
             ep_reward = 0
             done = False
-            state = env.reset()
-            state = env.render(mode="rgb_array")
-            state = resize(state, (64,64))
+            env.reset()
+            state = get_state(env)
             while not done:
-                _, action = self.action(torch.FloatTensor(state).unsqueeze(dim=0))
+                _, action = self.action(torch.FloatTensor(state))
                 state, reward, done, _ = env.step(action)
                 ep_reward += reward
-                env.render(mode="rgb_array")
-                state = resize(state, (64,64))
+                state = get_state(env)
             print(f"REWARD: {ep_reward}")
         env.close()
 
@@ -65,7 +63,7 @@ class A3C:
         with torch.no_grad():
             state = torch.FloatTensor(state).unsqueeze(dim=0)
             representation = self.convnet(state)
-            policy = self.policynet(representation)
+            policy = self.policynet(representation).squeeze(dim=0)
             probs = F.softmax(policy, dim=0).data.numpy()
             probs /= sum(probs)
             action = np.random.choice(self.actions, size=None, replace=False, p=probs)
