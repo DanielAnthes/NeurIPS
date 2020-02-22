@@ -10,7 +10,7 @@ agent = A3C(queue)
 
 try:
     log_thread.start()
-    agent.train(6, 4000) # train with 6 processes
+    agent.train(1, 100) # train with 6 processes
     print("FINISHED TRAINING")
     agent.evaluate(10)
     # stop logger

@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 class Net(nn.Module):
     """
-    Implements a simple fully connected network 
+    Implements a simple fully connected network
     """
     def __init__(self, num_in, num_out):
         super(Net, self).__init__()
@@ -56,7 +56,7 @@ class CNN(nn.Module):
         self.net.add_module("BN_2", nn.BatchNorm2d(16))
         self.net.add_module("Act_2", nn.LeakyReLU())
         self.net.add_module("Flatten", Flatten())
-        self.net.add_module("Readout", nn.Linear(1024, outputs))
+        self.net.add_module("Readout", nn.Linear(3136, outputs))
         self.net.add_module("Act_3", nn.LeakyReLU())
 
     # Called with either one element to determine next action, or a batch
