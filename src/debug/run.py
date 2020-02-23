@@ -6,13 +6,13 @@ from threading import Thread
 
 def main():
     queue = Queue()
-    logger = Logger("logs/cp_pxl_5", queue)
+    logger = Logger("logs/cp_pxl_6", queue)
     log_thread = Thread(target=logger.run, name="logger")
     agent = A3C(queue)
 
     try:
         log_thread.start()
-        agent.train(4, 5000) # train with 4 processes
+        agent.train(4, 3000) # train with 4 processes
         print("FINISHED TRAINING")
         agent.evaluate(10)
         # stop logger

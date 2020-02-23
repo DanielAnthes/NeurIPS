@@ -36,7 +36,7 @@ class A3C:
         # set up a list of processes
         processes = list()
         for i in range(num_processes):
-            worker = Worker(self.global_counter, episodes, self.convnet, self.valuenet, self.policynet, self.optimizer, self.log_queue, f"Worker-{i}")
+            worker = Worker(self.global_counter, episodes, self.convnet, self.valuenet, self.policynet, self.optimizer, self.log_queue, f"Worker-{i}", self.evaluate)
             processes.append(Process(target=worker.train))
 
         for p in processes:
@@ -47,6 +47,7 @@ class A3C:
     def evaluate(self, num_eps):
         env = gym.make("CartPole-v1")
         done = False
+        rewards = list()
         for i in range(num_eps):
             ep_reward = 0
             done = False
@@ -58,7 +59,9 @@ class A3C:
                 ep_reward += reward
                 state = get_state(env)
             print(f"REWARD: {ep_reward}")
+            rewards.append(ep_reward)
         env.close()
+        return rewards
 
     def action(self, state):
         with torch.no_grad():
