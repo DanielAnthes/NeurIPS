@@ -4,6 +4,7 @@ import Networks as N
 import gym
 import torch
 import torch.nn.functional as F
+from torch.nn.utils import clip_grad_norm_
 from random import random, choice
 import numpy as np
 from utils import resize, get_state
@@ -32,6 +33,7 @@ class Worker(mp.Process):
         self.gamma = 0.95
         self.actions = [0, 1]
         self.name = name
+        self.max_norm = 1
 
     def train(self):
         print("Worker started training")
@@ -100,6 +102,12 @@ class Worker(mp.Process):
             loss = value_loss + policy_loss
             self.logq.put(LogEntry(LogType.SCALAR, f"loss/{self.name}", loss.detach(), self.global_counter.value, {}))
             loss.backward()
+
+            # clip gradients
+
+            clip_grad_norm_(self.convnet.parameters(), self.max_norm)
+            clip_grad_norm_(self.policynet.parameters(), self.max_norm)
+            clip_grad_norm_(self.valuenet.parameters(), self.max_norm)
 
             # push gradients to shared network
             self.share_gradients(self.valuenet, self.shared_value)
