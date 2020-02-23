@@ -14,7 +14,8 @@ class A3C:
 
     def __init__(self, queue):
         # networks
-        self.convnet = N.CNN(128)
+        # self.convnet = N.CNN(128)
+        self.convnet = N.PretrainedResNet(128)
         self.valuenet = N.WideNet(128, 32, 1)
         self.policynet = N.WideNet(128, 32, 2)
 

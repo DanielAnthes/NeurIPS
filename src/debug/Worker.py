@@ -14,7 +14,8 @@ class Worker(mp.Process):
     def __init__(self, global_counter, global_max_episodes, shared_conv, shared_value, shared_policy, shared_optim, log_queue, name, evaluate):
 
         # networks
-        self.convnet = N.CNN(128)
+        # self.convnet = N.CNN(128)
+        self.convnet = N.PretrainedResNet(128)
         self.valuenet = N.WideNet(128, 32, 1)
         self.policynet = N.WideNet(128, 32, 2)
 
@@ -105,6 +106,10 @@ class Worker(mp.Process):
                 policy_loss -= log_policy_t * advantage
                 value_loss += advantage**2
             loss = value_loss + policy_loss
+
+            # normalize loss with lookahead
+            loss /= self.lookahead
+
             self.logq.put(LogEntry(LogType.SCALAR, f"loss/{self.name}", loss.detach(), self.global_counter.value, {}))
             loss.backward()
 
