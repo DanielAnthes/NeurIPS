@@ -105,6 +105,10 @@ class Worker(mp.Process):
                 policy_loss -= log_policy_t * advantage
                 value_loss += advantage**2
             loss = value_loss + policy_loss
+
+            # normalize loss with lookahead
+            loss /= self.lookahead
+
             self.logq.put(LogEntry(LogType.SCALAR, f"loss/{self.name}", loss.detach(), self.global_counter.value, {}))
             loss.backward()
 
