@@ -77,7 +77,7 @@ class PretrainedResNet(nn.Module):
             param.requires_grad = False # freeze parameters
         self.net = nn.Sequential(*list(resnet.children())[:-14]) # only take first 4 conv layers
         self.net.add_module("Flatten", Flatten())
-        self.net.add_module("Readout", nn.Linear(4800, outputs))
+        self.net.add_module("Readout", nn.Linear(12288, outputs))
 
     def forward(self, x):
         return self.net(x)

@@ -25,7 +25,7 @@ class A3C:
 
         params = [self.convnet.parameters(), self.valuenet.parameters(), self.policynet.parameters()]
         # self.optimizer = Adam(itertools.chain(*params))
-        self.optimizer = SGD(itertools.chain(*params), lr=0.0001, momentum=0.9)
+        self.optimizer = SGD(itertools.chain(*params), lr=0.001, momentum=0.9)
 
         self.global_counter = Value('i', 0)
 
