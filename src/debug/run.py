@@ -6,7 +6,7 @@ from threading import Thread
 
 def main():
     queue = Queue()
-    logger = Logger("logs/cp_pxl_13", queue)
+    logger = Logger("logs/cp3", queue)
     log_thread = Thread(target=logger.run, name="logger")
     agent = A3C(queue)
 
@@ -26,6 +26,4 @@ def main():
         raise e
 
 if __name__ == "__main__":
-    main() 
-
-
+    main()

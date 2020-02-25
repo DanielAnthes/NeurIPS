@@ -14,8 +14,8 @@ class Worker(mp.Process):
     def __init__(self, global_counter, global_max_episodes, shared_conv, shared_value, shared_policy, shared_optim, log_queue, name, evaluate):
 
         # networks
-        # self.convnet = N.CNN(128)
-        self.convnet = N.PretrainedResNet(128)
+        self.convnet = N.CNN(128)
+        # self.convnet = N.PretrainedResNet(128)
         self.valuenet = N.WideNet(128, 32, 1)
         self.policynet = N.WideNet(128, 32, 2)
 
@@ -111,6 +111,9 @@ class Worker(mp.Process):
             loss /= self.lookahead
 
             self.logq.put(LogEntry(LogType.SCALAR, f"loss/{self.name}", loss.detach(), self.global_counter.value, {}))
+            self.logq.put(LogEntry(LogType.SCALAR, f"value_loss/{self.name}", value_loss.detach(), self.global_counter.value, {}))
+            self.logq.put(LogEntry(LogType.SCALAR, f"policy_loss/{self.name}", policy_loss.detach(), self.global_counter.value, {}))
+
             loss.backward()
 
             # clip gradients
@@ -146,7 +149,7 @@ class Worker(mp.Process):
 
 
     def epsilon(self):
-        eps = 1 - (self.global_counter.value / self.global_max_episodes) # linearly decreasing epsilon as a function of training percentage completed
+        eps = max(1 - 2*(self.global_counter.value / self.global_max_episodes), 0.1) # linearly decreasing epsilon as a function of training percentage completed
         if self.name == "Worker-0":
             self.logq.put(LogEntry(LogType.SCALAR, "epsilon", eps, self.global_counter.value, {}))
         return eps
@@ -159,4 +162,3 @@ class Worker(mp.Process):
     def share_gradients(self, from_net, to_net):
         for from_param, to_param in zip(from_net.parameters(), to_net.parameters()):
             to_param._grad = from_param.grad
-
