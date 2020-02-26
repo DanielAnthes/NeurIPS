@@ -5,7 +5,7 @@ import torch
 from random import random, choice
 import Networks as N
 import itertools
-from torch.optim import Adam, SGD
+from torch.optim import Adam, SGD, RMSprop
 import torch.nn.functional as F
 from torch.multiprocessing import Value, Process
 from Worker import Worker
@@ -14,10 +14,13 @@ class A3C:
 
     def __init__(self, queue):
         # networks
-        self.convnet = N.CNN(128)
+        self.convnet = N.GermainNet()
+        # self.convnet = N.CNN(128)
         # self.convnet = N.PretrainedResNet(128)
-        self.valuenet = N.WideNet(128, 32, 1)
-        self.policynet = N.WideNet(128, 32, 2)
+        # self.valuenet = N.WideNet(128, 32, 1)
+        # self.policynet = N.WideNet(128, 32, 2)
+        self.valuenet = N.GermainCritic()
+        self.policynet = N.GermainActor(2)
 
         self.convnet.share_memory()
         self.valuenet.share_memory()
@@ -25,7 +28,8 @@ class A3C:
 
         params = [self.convnet.parameters(), self.valuenet.parameters(), self.policynet.parameters()]
         # self.optimizer = Adam(itertools.chain(*params))
-        self.optimizer = SGD(itertools.chain(*params), lr=0.0001, momentum=0.9)
+        # self.optimizer = SGD(itertools.chain(*params), lr=0.0001, momentum=0.9)
+        self.optimizer = RMSprop(itertools.chain(*params), lr=0.0001)
 
         self.global_counter = Value('i', 0)
 

@@ -6,7 +6,7 @@ from threading import Thread
 
 def main():
     queue = Queue()
-    logger = Logger("logs/cp3", queue)
+    logger = Logger("logs/cp4", queue)
     log_thread = Thread(target=logger.run, name="logger")
     agent = A3C(queue)
 
