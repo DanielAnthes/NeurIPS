@@ -6,15 +6,15 @@ from threading import Thread
 
 def main():
     queue = Queue()
-    logger = Logger("logs/cp4", queue)
+    logger = Logger("logs/cp7", queue)
     log_thread = Thread(target=logger.run, name="logger")
     agent = A3C(queue)
 
     try:
         log_thread.start()
-        agent.train(4, 3000) # train with 4 processes
+        agent.train(8, 10000) # train with 4 processes
         print("FINISHED TRAINING")
-        agent.evaluate(10)
+        # agent.evaluate(10)
         # stop logger
         queue.put(None)
         log_thread.join()

@@ -38,7 +38,7 @@ class Worker(mp.Process):
         self.gamma = 0.99
         self.actions = [0, 1]
         self.name = name
-        self.max_norm = 1
+        self.max_norm = 0.5
 
     def train(self):
         print("Worker started training")
@@ -76,14 +76,18 @@ class Worker(mp.Process):
                     env.reset()
                     state = get_state(env)
                     reward_eps.append(reward_ep)
+                    # print(f"\n\nEPISODE REWARD {reward_ep}")
                     with self.global_counter.get_lock():
                         self.global_counter.value += 1
                     self.logq.put(LogEntry(LogType.SCALAR, f"reward/{self.name}", reward_ep, self.global_counter.value, {}))
                     reward_ep = 0
 
-                    if self.global_counter.value % 200 == 0:
+                    if self.global_counter.value % 100 == 0:
                         eval_rewards = self.evaluate(10)
                         print(f"MEAN EVALUATION REWARD: {np.mean(eval_rewards)}")
+                        for e in eval_rewards:
+                            self.logq.put(LogEntry(LogType.SCALAR, f"evaluation", e, self.global_counter.value, {}))
+                    break
 
             # compute loss over last "lookahead"
             if done:
@@ -96,22 +100,32 @@ class Worker(mp.Process):
             policy_loss = 0
             value_loss = 0
 
+            # print("START LOSS COMPUTATION")
+            #print(f"number of steps: {n_steps}")
             for t in range(n_steps-1,-1,-1): # traverse backwards through states
+                # print(f"step {t}")
                 R = rewards[t] + self.gamma * R
+                # print(f"reward {R}")
                 current_state = torch.FloatTensor(states[t]).unsqueeze(dim=0)
                 current_action = torch.LongTensor([actions[t]])
                 current_representation = self.convnet(current_state).squeeze(dim=0)
                 policy = self.policynet(current_representation)
+                # print(f"policy logits {policy}")
                 policy = F.log_softmax(policy, dim=0)
+                # print(f"log policy {policy}")
                 log_policy_t = torch.index_select(policy, dim=0, index=current_action) # policy value of action that was performed
                 value_t = self.valuenet(current_representation)
-                advantage = R -value_t
-                policy_loss -= log_policy_t * advantage
+                # print(f"value {value_t}")
+                advantage = R - value_t
+                # print(f"advantage {advantage}")
+                policy_loss -= log_policy_t * advantage.detach()
+                # print(f"policy loss {policy_loss}")
                 value_loss += advantage**2
+                # print(f"value loss {value_loss}")
             loss = value_loss + policy_loss
 
             # normalize loss with lookahead
-            loss /= self.lookahead
+            # loss /= self.lookahead
 
             self.logq.put(LogEntry(LogType.SCALAR, f"loss/{self.name}", loss.detach(), self.global_counter.value, {}))
             self.logq.put(LogEntry(LogType.SCALAR, f"value_loss/{self.name}", value_loss.detach(), self.global_counter.value, {}))
@@ -121,9 +135,9 @@ class Worker(mp.Process):
 
             # clip gradients
 
-            clip_grad_norm_(self.convnet.parameters(), self.max_norm)
-            clip_grad_norm_(self.policynet.parameters(), self.max_norm)
-            clip_grad_norm_(self.valuenet.parameters(), self.max_norm)
+            # clip_grad_norm_(self.convnet.parameters(), self.max_norm)
+            # clip_grad_norm_(self.policynet.parameters(), self.max_norm)
+            # clip_grad_norm_(self.valuenet.parameters(), self.max_norm)
 
             # push gradients to shared network
             self.share_gradients(self.valuenet, self.shared_value)
