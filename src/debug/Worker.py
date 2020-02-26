@@ -102,7 +102,7 @@ class Worker(mp.Process):
                 policy = F.log_softmax(policy, dim=0)
                 log_policy_t = torch.index_select(policy, dim=0, index=current_action) # policy value of action that was performed
                 value_t = self.valuenet(current_representation)
-                advantage = R -value_t
+                advantage = R - value_t.detach() # detach value to avoid propagating into policy error
                 policy_loss -= log_policy_t * advantage
                 value_loss += advantage**2
             loss = value_loss + policy_loss
