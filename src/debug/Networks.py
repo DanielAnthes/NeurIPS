@@ -111,3 +111,44 @@ class PretrainedSqueezeNet(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+
+class GermainNet(nn.Module):
+    """adapted from https://github.com/germain-hug/Deep-RL-Keras"""
+    def __init__(self):
+        super(GermainNet, self).__init__()
+        self.net = nn.Sequential()
+        self.net.add_module("Conv1", nn.Conv2d(3, 32, 3))
+        self.net.add_module("ActC1", nn.ReLU())
+        self.net.add_module("Pool1", nn.MaxPool2d(2))
+        self.net.add_module("Conv2", nn.Conv2d(32, 32, 3))
+        self.net.add_module("ActC2", nn.ReLU())
+        self.net.add_module("Pool2", nn.MaxPool2d(2))
+        self.net.add_module("Flatten", Flatten())
+
+    def forward(self, x):
+        return self.net(x)
+
+class GermainActor(nn.Module):
+    """adapted from https://github.com/germain-hug/Deep-RL-Keras"""
+    def __init__(self, actionspace):
+        super(GermainActor, self).__init__()
+        self.net = nn.Sequential()
+        self.net.add_module("FFN", nn.Linear(6272, 128))
+        self.net.add_module("Act1", nn.ReLU())
+        self.net.add_module("Readout", nn.Linear(128, actionspace))
+        self.net.add_module("Readout_Act", nn.Softmax())
+
+    def forward(self, x):
+        return self.net(x)
+
+class GermainCritic(nn.Module):
+    """adapted from https://github.com/germain-hug/Deep-RL-Keras"""
+    def __init__(self):
+        super(GermainCritic, self).__init__()
+        self.net = nn.Sequential()
+        self.net.add_module("FFN", nn.Linear(6272, 128))
+        self.net.add_module("Act1", nn.ReLU())
+        self.net.add_module("Readout", nn.Linear(128, 1))
+        
+    def forward(self, x):
+        return self.net(x)

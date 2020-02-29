@@ -15,10 +15,13 @@ class Worker(mp.Process):
         self.save = save
 
         # networks
-        self.convnet = N.CNN(128)
-        # self.convnet = N.PretrainedResNet(128)
-        self.valuenet = N.WideNet(128, 32, 1)
-        self.policynet = N.WideNet(128, 32, 2)
+        # self.convnet = N.CNN(128)
+        # # self.convnet = N.PretrainedResNet(128)
+        # self.valuenet = N.WideNet(128, 32, 1)
+        # self.policynet = N.WideNet(128, 32, 2)
+        self.convnet = N.GermainNet()
+        self.valuenet = N.GermainCritic()
+        self.policynet = N.GermainActor(2)
 
         self.shared_value = shared_value
         self.shared_policy = shared_policy
