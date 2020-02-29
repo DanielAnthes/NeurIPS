@@ -1,3 +1,7 @@
+import os
+import time
+from pathlib import Path
+
 from utils import resize, get_state
 import numpy as np
 import gym
@@ -24,8 +28,8 @@ class A3C:
         self.policynet.share_memory()
 
         params = [self.convnet.parameters(), self.valuenet.parameters(), self.policynet.parameters()]
-        self.optimizer = Adam(itertools.chain(*params))
-        # self.optimizer = SGD(itertools.chain(*params), lr=0.0001, momentum=0.9)
+        self.optimizer = Adam(itertools.chain(*params), lr=1e-4)#, amsgrad=True)
+        # self.optimizer = SGD(itertools.chain(*params), lr=0.001, momentum=0.8)
 
         self.global_counter = Value('i', 0)
 
@@ -37,7 +41,7 @@ class A3C:
         # set up a list of processes
         processes = list()
         for i in range(num_processes):
-            worker = Worker(self.global_counter, episodes, self.convnet, self.valuenet, self.policynet, self.optimizer, self.log_queue, f"Worker-{i}", self.evaluate)
+            worker = Worker(self.global_counter, episodes, self.convnet, self.valuenet, self.policynet, self.optimizer, self.log_queue, f"Worker-{i}", self.evaluate, self.save)
             processes.append(Process(target=worker.train))
 
         for p in processes:
@@ -53,12 +57,17 @@ class A3C:
             ep_reward = 0
             done = False
             env.reset()
-            state = get_state(env)
+            currentstate = get_state(env)
+            state = torch.FloatTensor([currentstate, currentstate, currentstate]).squeeze()
+            # state = currentstate
+
             while not done:
-                _, action = self.action(torch.FloatTensor(state))
-                state, reward, done, _ = env.step(action)
+                _, action = self.action(state)
+                _, reward, done, _ = env.step(action)
                 ep_reward += reward
-                state = get_state(env)
+                newstate = torch.FloatTensor(get_state(env))
+                state = torch.cat((state[1:, :, :], newstate), 0)
+                # state = newstate
             print(f"REWARD: {ep_reward}")
             rewards.append(ep_reward)
         env.close()
@@ -73,3 +82,19 @@ class A3C:
             probs /= sum(probs)
             action = np.random.choice(self.actions, size=None, replace=False, p=probs)
         return policy, action
+
+    def save(self, path="."):
+        path = os.path.join(path, str(int(time.time())))
+        os.makedirs(path, exist_ok=True)
+        torch.save(self.convnet.state_dict(), os.path.join(path, "convnet"))
+        torch.save(self.valuenet.state_dict(), os.path.join(path, "valuenet"))
+        torch.save(self.policynet.state_dict(), os.path.join(path, "policynet"))
+        Path(os.path.join(path, f"counter-{self.global_counter.value}")).touch()
+
+    def load(self, path="."):
+        for f in os.listdir(path):
+            if f.startswith("counter"):
+                self.global_counter.value = f.split("-")[-1]
+        self.convnet.load_state_dict(torch.load(os.path.join(path, "convnet")))
+        self.valuenet.load_state_dict(torch.load(os.path.join(path, "valuenet")))
+        self.policynet.load_state_dict(torch.load(os.path.join(path, "policynet")))

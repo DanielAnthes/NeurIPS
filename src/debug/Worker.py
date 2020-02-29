@@ -11,7 +11,8 @@ from utils import resize, get_state
 
 class Worker(mp.Process):
 
-    def __init__(self, global_counter, global_max_episodes, shared_conv, shared_value, shared_policy, shared_optim, log_queue, name, evaluate):
+    def __init__(self, global_counter, global_max_episodes, shared_conv, shared_value, shared_policy, shared_optim, log_queue, name, evaluate, save):
+        self.save = save
 
         # networks
         self.convnet = N.CNN(128)
@@ -31,11 +32,11 @@ class Worker(mp.Process):
         self.logq= log_queue
 
         # parameters
-        self.lookahead = 10
-        self.gamma = 0.95
+        self.lookahead = 30
+        self.gamma = 0.99
         self.actions = [0, 1]
         self.name = name
-        self.max_norm = 0.5
+        self.max_norm = 0.1
 
     def train(self):
         print("Worker started training")
@@ -43,7 +44,10 @@ class Worker(mp.Process):
         reward_ep = 0
         env = gym.make('CartPole-v1')
         env.reset()
-        state = get_state(env)
+        currentstate = get_state(env)
+        state = torch.FloatTensor([currentstate, currentstate, currentstate]).squeeze()
+        # state = currentstate
+
         done = False
 
         # repeat until maximum number of episodes is reached
@@ -64,14 +68,18 @@ class Worker(mp.Process):
                 states.append(state)
                 policy, action = self.action(state)
                 _ ,reward, done, _ = env.step(action)
-                state = get_state(env)
+                newstate = torch.FloatTensor(get_state(env))
+                state = torch.cat((state[1:, :, :], newstate), 0)
+                # state = newstate
                 actions.append(action)
                 rewards.append(reward)
                 reward_ep += reward
 
                 if done:
                     env.reset()
-                    state = get_state(env)
+                    currentstate = get_state(env)
+                    state = torch.FloatTensor([currentstate, currentstate, currentstate]).squeeze()
+
                     reward_eps.append(reward_ep)
                     # print(f"\n\nEPISODE REWARD {reward_ep}")
                     with self.global_counter.get_lock():
@@ -84,6 +92,7 @@ class Worker(mp.Process):
                         print(f"MEAN EVALUATION REWARD: {np.mean(eval_rewards)}")
                         for e in eval_rewards:
                             self.logq.put(LogEntry(LogType.SCALAR, f"evaluation", e, self.global_counter.value, {}))
+                        self.save("model2")
                     break
 
             # compute loss over last "lookahead"
@@ -99,6 +108,7 @@ class Worker(mp.Process):
 
             # print("START LOSS COMPUTATION")
             #print(f"number of steps: {n_steps}")
+            self.shared_optim.zero_grad() # TODO MAYBE NOT NEEDED
             for t in range(n_steps-1,-1,-1): # traverse backwards through states
                 # print(f"step {t}")
                 R = rewards[t] + self.gamma * R
@@ -119,7 +129,7 @@ class Worker(mp.Process):
                 # print(f"policy loss {policy_loss}")
                 value_loss += advantage**2
                 # print(f"value loss {value_loss}")
-            loss = value_loss + policy_loss
+            loss = 0.1*(0.01*value_loss + policy_loss)
 
             # normalize loss with lookahead
             # loss /= self.lookahead
@@ -132,14 +142,22 @@ class Worker(mp.Process):
 
             # clip gradients
 
-            # clip_grad_norm_(self.convnet.parameters(), self.max_norm)
-            # clip_grad_norm_(self.policynet.parameters(), self.max_norm)
-            # clip_grad_norm_(self.valuenet.parameters(), self.max_norm)
+            clip_grad_norm_(self.convnet.parameters(), self.max_norm)
+            clip_grad_norm_(self.policynet.parameters(), self.max_norm)
+            clip_grad_norm_(self.valuenet.parameters(), self.max_norm)
 
             # push gradients to shared network
             self.share_gradients(self.valuenet, self.shared_value)
             self.share_gradients(self.policynet, self.shared_policy)
             self.share_gradients(self.convnet, self.shared_conv)
+
+            if self.name == "Worker-0":
+                for idx, (name, param) in enumerate(self.shared_conv.named_parameters()):
+                    if "BN" in name: continue
+                    self.logq.put(LogEntry(LogType.HISTOGRAM, f"{name}-values", param.flatten().detach(),
+                                           self.global_counter.value, {}))
+                    self.logq.put(LogEntry(LogType.HISTOGRAM, f"{name}-grads", param.grad.flatten().detach(),
+                                           self.global_counter.value, {}))
 
             # optimize shared nets
             self.shared_optim.step()
