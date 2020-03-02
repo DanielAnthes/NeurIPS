@@ -31,6 +31,9 @@ class Environment:
         self._send(2, action)
         return self._receive()
 
+    def quit(self):
+        self._send(3, 0)
+
     def state2image(self, state):
         return Image.fromarray(np.array(state, "uint8").reshape(self.size, self.size, 3))
 
