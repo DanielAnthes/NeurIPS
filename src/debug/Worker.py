@@ -7,21 +7,23 @@ import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
 from random import random, choice
 import numpy as np
-from utils import resize, get_state
+from utils import resize, get_state, NeurosmashEnvironment as NSenv, prep_neurosmash_screen as NSscreen
 
 class Worker(mp.Process):
 
-    def __init__(self, global_counter, global_max_episodes, shared_conv, shared_value, shared_policy, shared_optim, log_queue, name, evaluate, save):
+    def __init__(self, global_counter, global_max_episodes, shared_conv, shared_value, shared_policy, shared_optim, log_queue, num, evaluate, save):
         self.save = save
+        self.actions = [0, 1, 2, 3]
 
         # networks
-        # self.convnet = N.CNN(128)
+        ch_in = 9 # 9 for NS
+        self.convnet = N.CNN(ch_in, 64)
         # # self.convnet = N.PretrainedResNet(128)
-        # self.valuenet = N.WideNet(128, 32, 1)
-        # self.policynet = N.WideNet(128, 32, 2)
-        self.convnet = N.GermainNet()
-        self.valuenet = N.GermainCritic()
-        self.policynet = N.GermainActor(2)
+        self.valuenet = N.WideNet(64, 32, 1)
+        self.policynet = N.WideNet(64, 32, len(self.actions))
+        # self.convnet = N.GermainNet()
+        # self.valuenet = N.GermainCritic()
+        # self.policynet = N.GermainActor(2)
 
         self.shared_value = shared_value
         self.shared_policy = shared_policy
@@ -37,21 +39,31 @@ class Worker(mp.Process):
         # parameters
         self.lookahead = 30
         self.gamma = 0.99
-        self.actions = [0, 1]
-        self.name = name
+        self.name = f"Worker-{num}"
+        self.num = num
         self.max_norm = 0.1
 
     def train(self):
         print("Worker started training")
         reward_eps = list()
         reward_ep = 0
-        env = gym.make('CartPole-v1')
+
+        ### Gym
+        # env = gym.make('CartPole-v1')
+        env = gym.make("LunarLander-v2")
+
+        ### Gym
         env.reset()
         currentstate = get_state(env)
-        state = torch.FloatTensor([currentstate, currentstate, currentstate]).squeeze()
-        # state = currentstate
-
+        # state = torch.FloatTensor([currentstate, currentstate, currentstate]).squeeze()
         done = False
+
+        ### Neurosmash -> indent everything but the return
+        # with NSenv(port=10000+self.num, size=64, timescale=5) as env:
+        # done, reward, state = env.reset()
+        # currentstate = torch.FloatTensor(NSscreen(state))
+        state = torch.cat((currentstate, currentstate, currentstate), 0)
+        # print("intital state", state.shape)
 
         # repeat until maximum number of episodes is reached
         while self.global_counter.value < self.global_max_episodes:
@@ -70,18 +82,30 @@ class Worker(mp.Process):
             for t in range(self.lookahead):
                 states.append(state)
                 policy, action = self.action(state)
+                ### Gym
                 _ ,reward, done, _ = env.step(action)
                 newstate = torch.FloatTensor(get_state(env))
-                state = torch.cat((state[1:, :, :], newstate), 0)
-                # state = newstate
+                # state = torch.cat((state[1:, :, :], newstate), 0)
+
+                ### Neurosmash
+                # done, reward, newstate = env.step(action)
+                # newstate = torch.FloatTensor(NSscreen(newstate))
+                state = torch.cat((state[3:, :, :], newstate), 0)
+
                 actions.append(action)
                 rewards.append(reward)
                 reward_ep += reward
 
                 if done:
+                    ### Gym
                     env.reset()
                     currentstate = get_state(env)
-                    state = torch.FloatTensor([currentstate, currentstate, currentstate]).squeeze()
+                    # state = torch.FloatTensor([currentstate, currentstate, currentstate]).squeeze()
+
+                    ### Neurosmash
+                    # done, reward, state = env.reset()
+                    # currentstate = torch.FloatTensor(NSscreen(state))
+                    state = torch.cat((currentstate, currentstate, currentstate), 0)
 
                     reward_eps.append(reward_ep)
                     # print(f"\n\nEPISODE REWARD {reward_ep}")
@@ -90,12 +114,12 @@ class Worker(mp.Process):
                     self.logq.put(LogEntry(LogType.SCALAR, f"reward/{self.name}", reward_ep, self.global_counter.value, {}))
                     reward_ep = 0
 
-                    if self.global_counter.value % 100 == 0:
+                    if self.global_counter.value % 500 == 0:
                         eval_rewards = self.evaluate(10)
                         print(f"MEAN EVALUATION REWARD: {np.mean(eval_rewards)}")
                         for e in eval_rewards:
                             self.logq.put(LogEntry(LogType.SCALAR, f"evaluation", e, self.global_counter.value, {}))
-                        self.save("model2")
+                        self.save("model2-lander-training")
                     break
 
             # compute loss over last "lookahead"
@@ -135,7 +159,7 @@ class Worker(mp.Process):
             loss = 0.1*(0.01*value_loss + policy_loss)
 
             # normalize loss with lookahead
-            # loss /= self.lookahead
+            loss /= self.lookahead
 
             self.logq.put(LogEntry(LogType.SCALAR, f"loss/{self.name}", loss.detach(), self.global_counter.value, {}))
             self.logq.put(LogEntry(LogType.SCALAR, f"value_loss/{self.name}", value_loss.detach(), self.global_counter.value, {}))
@@ -167,7 +191,7 @@ class Worker(mp.Process):
             self.shared_optim.zero_grad()
 
         # close environment after training
-        env.close()
+        # env.close()
 
     def action(self, state):
         with torch.no_grad():
@@ -185,6 +209,7 @@ class Worker(mp.Process):
 
     def epsilon(self):
         eps = max(1 - 2*(self.global_counter.value / self.global_max_episodes), 0.1) # linearly decreasing epsilon as a function of training percentage completed
+        # eps = (min(1, 0.1 + np.exp(-0.00005 * self.global_counter.value)))
         if self.name == "Worker-0":
             self.logq.put(LogEntry(LogType.SCALAR, "epsilon", eps, self.global_counter.value, {}))
         return eps

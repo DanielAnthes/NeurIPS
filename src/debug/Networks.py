@@ -50,35 +50,50 @@ class CNN(nn.Module):
     https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
     '''
 
-    def __init__(self, outputs):
+    def __init__(self, channels_in, out_features):
         super(CNN, self).__init__()
         self.net = nn.Sequential()
-        m = nn.Conv2d(3, 16, kernel_size=3, stride=2)
+        # ToDo: layer normalization
+        # add padding of 1
+        m = nn.Conv2d(channels_in, 16, kernel_size=3, stride=2, padding=1)
         he(m.weight)
         self.net.add_module("Conv_1", m)
-        self.net.add_module("BN_1", nn.BatchNorm2d(16))
+        # self.net.add_module("BN_1", nn.BatchNorm2d(16))
         self.net.add_module("Act_1", nn.ReLU())
-        m = nn.Conv2d(16, 16, kernel_size=3, stride=2)
+        m = nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1)
         he(m.weight)
         self.net.add_module("Conv_2", m)
-        self.net.add_module("BN_2", nn.BatchNorm2d(16))
+        # self.net.add_module("BN_2", nn.BatchNorm2d(32))
         self.net.add_module("Act_2", nn.ReLU())
-        self.net.add_module("Flatten", Flatten())
+        # self.net.add_module("Flatten", Flatten())
+        # ToDo: add 3rd CNN layer
+        m = nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1)
+        he(m.weight)
+        self.net.add_module("Conv_3", m)
+        self.net.add_module("Act_3", nn.ReLU())
+        # self.net.add_module("BN_3", nn.BatchNorm2d(64))
+        # ToDo:  global avg pooling -> 64x1x1
+        self.net.add_module("Global_Avg_Pool", nn.AvgPool2d(kernel_size=8, stride=0, padding=0))
+        # cnn from 64x1x1, kernel_size=1
+        m = nn.Conv2d(64, out_features, kernel_size=1)
+        xavier(m.weight)
+        self.net.add_module("Readout_Conv", m)
+        self.net.add_module("Readout_Act", nn.ReLU())
 
         # m = nn.GRUCell(3600, 3600)
         # xavier(m.weight_ih)
         # xavier(m.weight_hh)
         # self.memory = m
 
-        m = nn.Linear(3600, outputs)
-        xavier(m.weight)
-        self.net.add_module("Readout", m)
-        self.net.add_module("Act_3", nn.ReLU())
+        # m = nn.Linear(3600, outputs)
+        # xavier(m.weight)
+        # self.net.add_module("Readout", m)
+        # self.net.add_module("Act_3", nn.ReLU())
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
     def forward(self, x):
-        return self.net(x)
+        return self.net(x).squeeze()
 
 
 class Flatten(nn.Module):

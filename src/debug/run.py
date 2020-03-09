@@ -8,15 +8,15 @@ from threading import Thread
 
 def main():
     queue = Queue()
-    logger = Logger("logs/cp_stack_long3", queue)
+    logger = Logger("logs/lander2", queue)
     log_thread = Thread(target=logger.run, name="logger")
     agent = A3C(queue)
     # agent.load(sorted(os.listdir("model"), key=lambda x: int(x), reverse=True)[0])
 
     try:
         log_thread.start()
-        agent.train(num_processes=10, episodes=1e5)
-        agent.save("model")
+        agent.train(num_processes=12, episodes=5e5)
+        agent.save("model2-lander")
         print("FINISHED TRAINING")
         # agent.evaluate(10)
         # stop logger

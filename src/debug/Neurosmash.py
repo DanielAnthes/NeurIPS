@@ -42,7 +42,8 @@ class Environment:
         data   = self.client.recv(2 + 3 * self.size ** 2, socket.MSG_WAITALL)
         end    = data[0]
         reward = data[1]
-        state  = [data[i] for i in range(2, len(data))]
+        state  = np.array([data[i] for i in range(2, len(data))]).reshape((self.size, self.size, 3)).astype(np.float64)
+        state /= 256
 
         return end, reward, state
 

@@ -2,7 +2,7 @@ import os
 import time
 from pathlib import Path
 
-from utils import resize, get_state
+from utils import resize, get_state, NeurosmashEnvironment as NSenv, prep_neurosmash_screen as NSscreen
 import numpy as np
 import gym
 import torch
@@ -17,14 +17,16 @@ from Worker import Worker
 class A3C:
 
     def __init__(self, queue):
+        self.actions = [0, 1, 2, 3]
         # networks
-        self.convnet = N.GermainNet()
-        # self.convnet = N.CNN(128)
+        ch_in = 9 # 9 for NS
+        self.convnet = N.CNN(ch_in, 64)
         # self.convnet = N.PretrainedResNet(128)
-        # self.valuenet = N.WideNet(128, 32, 1)
-        # self.policynet = N.WideNet(128, 32, 2)
-        self.valuenet = N.GermainCritic()
-        self.policynet = N.GermainActor(2)
+        self.valuenet = N.WideNet(64, 32, 1)
+        self.policynet = N.WideNet(64, 32, len(self.actions))
+        # self.convnet = N.GermainNet()
+        # self.valuenet = N.GermainCritic()
+        # self.policynet = N.GermainActor(2)
 
         self.convnet.share_memory()
         self.valuenet.share_memory()
@@ -40,13 +42,11 @@ class A3C:
 
         self.log_queue = queue
 
-        self.actions = [0, 1]
-
     def train(self, num_processes, episodes):
         # set up a list of processes
         processes = list()
         for i in range(num_processes):
-            worker = Worker(self.global_counter, episodes, self.convnet, self.valuenet, self.policynet, self.optimizer, self.log_queue, f"Worker-{i}", self.evaluate, self.save)
+            worker = Worker(self.global_counter, episodes, self.convnet, self.valuenet, self.policynet, self.optimizer, self.log_queue, i, self.evaluate, self.save)
             processes.append(Process(target=worker.train))
 
         for p in processes:
@@ -55,27 +55,45 @@ class A3C:
             p.join()
 
     def evaluate(self, num_eps):
-        env = gym.make("CartPole-v1")
+        ### Gym
+        # env = gym.make("CartPole-v1")
+        env = gym.make("LunarLander-v2")
+        ### Neurosmash -> indent everything but the return
+        # with NSenv(port=9999, size=64, timescale=5) as env:
+
         done = False
         rewards = list()
         for i in range(num_eps):
             ep_reward = 0
             done = False
+            ### Gym
             env.reset()
             currentstate = get_state(env)
-            state = torch.FloatTensor([currentstate, currentstate, currentstate]).squeeze()
-            # state = currentstate
+            # state = torch.FloatTensor([currentstate, currentstate, currentstate]).squeeze()
+
+            ### Neurosmash
+            # done, reward, state = env.reset()
+            # currentstate = torch.FloatTensor(NSscreen(state))
+            state = torch.cat((currentstate, currentstate, currentstate), 0)
 
             while not done:
                 _, action = self.action(state)
+
+                ### Gym
                 _, reward, done, _ = env.step(action)
-                ep_reward += reward
                 newstate = torch.FloatTensor(get_state(env))
-                state = torch.cat((state[1:, :, :], newstate), 0)
-                # state = newstate
+                # state = torch.cat((state[1:, :, :], newstate), 0)
+
+                ### Neurosmash
+                # done, reward, newstate = env.step(action)
+                # newstate = torch.FloatTensor(NSscreen(newstate))
+                state = torch.cat((state[3:, :, :], newstate), 0)
+
+                ep_reward += reward
+
             print(f"REWARD: {ep_reward}")
             rewards.append(ep_reward)
-        env.close()
+            env.close()
         return rewards
 
     def action(self, state):
