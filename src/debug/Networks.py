@@ -56,6 +56,7 @@ class CNN(nn.Module):
         # ToDo: layer normalization
         # add padding of 1
         m = nn.Conv2d(channels_in, 16, kernel_size=3, stride=2, padding=1)
+
         he(m.weight)
         self.net.add_module("Conv_1", m)
         # self.net.add_module("BN_1", nn.BatchNorm2d(16))
