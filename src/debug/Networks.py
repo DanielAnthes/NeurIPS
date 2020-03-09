@@ -53,7 +53,7 @@ class CNN(nn.Module):
     def __init__(self, outputs):
         super(CNN, self).__init__()
         self.net = nn.Sequential()
-        m = nn.Conv2d(3, 16, kernel_size=3, stride=2)
+        m = nn.Conv2d(9, 16, kernel_size=3, stride=2)
         he(m.weight)
         self.net.add_module("Conv_1", m)
         self.net.add_module("BN_1", nn.BatchNorm2d(16))
