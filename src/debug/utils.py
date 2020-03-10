@@ -48,7 +48,7 @@ class NeurosmashEnvironment:
     def __enter__(self):
         subprocess.Popen([
             NEUROSMASH_PATH,
-            # "-batchmode",
+            "-batchmode",
             # "-I", # --ip
             # ip,
             "-P", # --port

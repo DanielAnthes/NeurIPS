@@ -9,11 +9,13 @@ from random import random, choice
 import numpy as np
 from utils import resize, get_state, NeurosmashEnvironment as NSenv, prep_neurosmash_screen as NSscreen
 
+MODEL_PATH = "model_neuro3"
+
 class Worker(mp.Process):
 
     def __init__(self, global_counter, global_max_episodes, shared_conv, shared_value, shared_policy, shared_optim, log_queue, num, evaluate, save):
         self.save = save
-        self.actions = [0, 1, 2, 3]
+        self.actions = [0, 1, 2]
 
         # networks
         ch_in = 9 # 9 for NS
@@ -44,154 +46,159 @@ class Worker(mp.Process):
         self.max_norm = 0.1
 
     def train(self):
-        print("Worker started training")
+        print(f"{self.name} started training")
         reward_eps = list()
         reward_ep = 0
 
         ### Gym
         # env = gym.make('CartPole-v1')
-        env = gym.make("LunarLander-v2")
+        # env = gym.make("LunarLander-v2")
 
         ### Gym
-        env.reset()
-        currentstate = get_state(env)
+        # env.reset()
+        # currentstate = get_state(env)
         # state = torch.FloatTensor([currentstate, currentstate, currentstate]).squeeze()
-        done = False
+        # done = False
 
         ### Neurosmash -> indent everything but the return
-        # with NSenv(port=10000+self.num, size=64, timescale=5) as env:
-        # done, reward, state = env.reset()
-        # currentstate = torch.FloatTensor(NSscreen(state))
-        state = torch.cat((currentstate, currentstate, currentstate), 0)
-        # print("intital state", state.shape)
+        step_cutoff = 800
+        with NSenv(port=10000+self.num, size=64, timescale=15, step_cutoff=step_cutoff, step_reward=0.1, lose_reward=-20, win_factor=2) as env:
+                done, reward, state = env.reset()
+                step_count = 0
+                currentstate = torch.FloatTensor(NSscreen(state))
+                state = torch.cat((currentstate, currentstate, currentstate), 0)
+                # print("intital state", state.shape)
 
-        # repeat until maximum number of episodes is reached
-        while self.global_counter.value < self.global_max_episodes:
-            policy_loss = torch.Tensor([0])
-            value_loss = torch.Tensor([0])
+                # repeat until maximum number of episodes is reached
+                while self.global_counter.value < self.global_max_episodes:
+                    policy_loss = torch.Tensor([0])
+                    value_loss = torch.Tensor([0])
 
-            # copy weights from shared net
-            self.share_weights(self.shared_policy, self.policynet)
-            self.share_weights(self.shared_value, self.valuenet)
-            self.share_weights(self.shared_conv, self.convnet)
+                    # copy weights from shared net
+                    self.share_weights(self.shared_policy, self.policynet)
+                    self.share_weights(self.shared_value, self.valuenet)
+                    self.share_weights(self.shared_conv, self.convnet)
 
-            states = list()
-            actions = list()
-            rewards = list()
+                    states = list()
+                    actions = list()
+                    rewards = list()
 
-            for t in range(self.lookahead):
-                states.append(state)
-                policy, action = self.action(state)
-                ### Gym
-                _ ,reward, done, _ = env.step(action)
-                newstate = torch.FloatTensor(get_state(env))
-                # state = torch.cat((state[1:, :, :], newstate), 0)
+                    for t in range(self.lookahead):
+                        states.append(state)
+                        policy, action = self.action(state)
+                        step_count += 1
+                        ### Gym
+                        # _ ,reward, done, _ = env.step(action)
+                        # newstate = torch.FloatTensor(get_state(env))
+                        # state = torch.cat((state[1:, :, :], newstate), 0)
 
-                ### Neurosmash
-                # done, reward, newstate = env.step(action)
-                # newstate = torch.FloatTensor(NSscreen(newstate))
-                state = torch.cat((state[3:, :, :], newstate), 0)
+                        ### Neurosmash
+                        done, reward, newstate = env.step(action)
+                        newstate = torch.FloatTensor(NSscreen(newstate))
+                        state = torch.cat((state[3:, :, :], newstate), 0)
 
-                actions.append(action)
-                rewards.append(reward)
-                reward_ep += reward
+                        actions.append(action)
+                        rewards.append(reward)
+                        reward_ep += reward
 
-                if done:
-                    ### Gym
-                    env.reset()
-                    currentstate = get_state(env)
-                    # state = torch.FloatTensor([currentstate, currentstate, currentstate]).squeeze()
+                        if done or step_count > step_cutoff:
+                            ### Gym
+                            # env.reset()
+                            # currentstate = get_state(env)
+                            # state = torch.FloatTensor([currentstate, currentstate, currentstate]).squeeze()
 
-                    ### Neurosmash
-                    # done, reward, state = env.reset()
-                    # currentstate = torch.FloatTensor(NSscreen(state))
-                    state = torch.cat((currentstate, currentstate, currentstate), 0)
+                            ### Neurosmash
+                            done, reward, state = env.reset()
+                            currentstate = torch.FloatTensor(NSscreen(state))
+                            state = torch.cat((currentstate, currentstate, currentstate), 0)
+                            step_count = 0
 
-                    reward_eps.append(reward_ep)
-                    # print(f"\n\nEPISODE REWARD {reward_ep}")
-                    with self.global_counter.get_lock():
-                        self.global_counter.value += 1
-                    self.logq.put(LogEntry(LogType.SCALAR, f"reward/{self.name}", reward_ep, self.global_counter.value, {}))
-                    reward_ep = 0
+                            reward_eps.append(reward_ep)
+                            # print(f"\n\nEPISODE REWARD {reward_ep}")
+                            with self.global_counter.get_lock():
+                                self.global_counter.value += 1
+                            self.logq.put(LogEntry(LogType.SCALAR, f"reward/{self.name}", reward_ep, self.global_counter.value, {}))
+                            reward_ep = 0
 
-                    if self.global_counter.value % 500 == 0:
-                        eval_rewards = self.evaluate(10)
-                        print(f"MEAN EVALUATION REWARD: {np.mean(eval_rewards)}")
-                        for e in eval_rewards:
-                            self.logq.put(LogEntry(LogType.SCALAR, f"evaluation", e, self.global_counter.value, {}))
-                        self.save("model2-lander-training")
-                    break
+                            if self.global_counter.value % 250 == 0:
+                                eval_rewards = self.evaluate(10)
+                                print(f"@Step Counter: {self.global_counter.value}")
+                                print(f"MEAN EVALUATION REWARD: {np.mean(eval_rewards)}")
+                                for e in eval_rewards:
+                                    self.logq.put(LogEntry(LogType.SCALAR, f"evaluation", e, self.global_counter.value, {}))
+                                self.save(MODEL_PATH)
+                            break
 
-            # compute loss over last "lookahead"
-            if done:
-                R = 0
-            else:
-                representation = self.convnet(torch.FloatTensor(state).unsqueeze(dim=0))
-                R = self.valuenet(representation)
+                    # compute loss over last "lookahead"
+                    if done:
+                        R = 0
+                    else:
+                        representation = self.convnet(torch.FloatTensor(state).unsqueeze(dim=0))
+                        R = self.valuenet(representation)
 
-            n_steps = len(rewards)
-            policy_loss = 0
-            value_loss = 0
+                    n_steps = len(rewards)
+                    policy_loss = 0
+                    value_loss = 0
 
-            # print("START LOSS COMPUTATION")
-            #print(f"number of steps: {n_steps}")
-            self.shared_optim.zero_grad() # TODO MAYBE NOT NEEDED
-            for t in range(n_steps-1,-1,-1): # traverse backwards through states
-                # print(f"step {t}")
-                R = rewards[t] + self.gamma * R
-                # print(f"reward {R}")
-                current_state = torch.FloatTensor(states[t]).unsqueeze(dim=0)
-                current_action = torch.LongTensor([actions[t]])
-                current_representation = self.convnet(current_state).squeeze(dim=0)
-                policy = self.policynet(current_representation)
-                # print(f"policy logits {policy}")
-                policy = F.log_softmax(policy, dim=0)
-                # print(f"log policy {policy}")
-                log_policy_t = torch.index_select(policy, dim=0, index=current_action) # policy value of action that was performed
-                value_t = self.valuenet(current_representation)
-                # print(f"value {value_t}")
-                advantage = R - value_t
-                # print(f"advantage {advantage}")
-                policy_loss -= log_policy_t * advantage.detach()
-                # print(f"policy loss {policy_loss}")
-                value_loss += advantage**2
-                # print(f"value loss {value_loss}")
-            loss = 0.1*(0.01*value_loss + policy_loss)
+                    # print("START LOSS COMPUTATION")
+                    #print(f"number of steps: {n_steps}")
+                    self.shared_optim.zero_grad() # TODO MAYBE NOT NEEDED
+                    for t in range(n_steps-1,-1,-1): # traverse backwards through states
+                        # print(f"step {t}")
+                        R = rewards[t] + self.gamma * R
+                        # print(f"reward {R}")
+                        current_state = torch.FloatTensor(states[t]).unsqueeze(dim=0)
+                        current_action = torch.LongTensor([actions[t]])
+                        current_representation = self.convnet(current_state).squeeze(dim=0)
+                        policy = self.policynet(current_representation)
+                        # print(f"policy logits {policy}")
+                        policy = F.log_softmax(policy, dim=0)
+                        # print(f"log policy {policy}")
+                        log_policy_t = torch.index_select(policy, dim=0, index=current_action) # policy value of action that was performed
+                        value_t = self.valuenet(current_representation)
+                        # print(f"value {value_t}")
+                        advantage = R - value_t
+                        # print(f"advantage {advantage}")
+                        policy_loss -= log_policy_t * advantage.detach()
+                        # print(f"policy loss {policy_loss}")
+                        value_loss += advantage**2
+                        # print(f"value loss {value_loss}")
+                    loss = 0.1*(0.01*value_loss + policy_loss)
 
-            # normalize loss with lookahead
-            loss /= self.lookahead
+                    # normalize loss with lookahead
+                    loss /= self.lookahead
 
-            self.logq.put(LogEntry(LogType.SCALAR, f"loss/{self.name}", loss.detach(), self.global_counter.value, {}))
-            self.logq.put(LogEntry(LogType.SCALAR, f"value_loss/{self.name}", value_loss.detach(), self.global_counter.value, {}))
-            self.logq.put(LogEntry(LogType.SCALAR, f"policy_loss/{self.name}", policy_loss.detach(), self.global_counter.value, {}))
+                    self.logq.put(LogEntry(LogType.SCALAR, f"loss/{self.name}", loss.detach(), self.global_counter.value, {}))
+                    self.logq.put(LogEntry(LogType.SCALAR, f"value_loss/{self.name}", value_loss.detach(), self.global_counter.value, {}))
+                    self.logq.put(LogEntry(LogType.SCALAR, f"policy_loss/{self.name}", policy_loss.detach(), self.global_counter.value, {}))
 
-            loss.backward()
+                    loss.backward()
 
-            # clip gradients
+                    # clip gradients
 
-            clip_grad_norm_(self.convnet.parameters(), self.max_norm)
-            clip_grad_norm_(self.policynet.parameters(), self.max_norm)
-            clip_grad_norm_(self.valuenet.parameters(), self.max_norm)
+                    clip_grad_norm_(self.convnet.parameters(), self.max_norm)
+                    clip_grad_norm_(self.policynet.parameters(), self.max_norm)
+                    clip_grad_norm_(self.valuenet.parameters(), self.max_norm)
 
-            # push gradients to shared network
-            self.share_gradients(self.valuenet, self.shared_value)
-            self.share_gradients(self.policynet, self.shared_policy)
-            self.share_gradients(self.convnet, self.shared_conv)
+                    # push gradients to shared network
+                    self.share_gradients(self.valuenet, self.shared_value)
+                    self.share_gradients(self.policynet, self.shared_policy)
+                    self.share_gradients(self.convnet, self.shared_conv)
 
-            if self.name == "Worker-0":
-                for idx, (name, param) in enumerate(self.shared_conv.named_parameters()):
-                    if "BN" in name: continue
-                    self.logq.put(LogEntry(LogType.HISTOGRAM, f"{name}-values", param.flatten().detach(),
-                                           self.global_counter.value, {}))
-                    self.logq.put(LogEntry(LogType.HISTOGRAM, f"{name}-grads", param.grad.flatten().detach(),
-                                           self.global_counter.value, {}))
+                    if self.name == "Worker-0":
+                        for idx, (name, param) in enumerate(self.shared_conv.named_parameters()):
+                            if "BN" in name: continue
+                            self.logq.put(LogEntry(LogType.HISTOGRAM, f"{name}-values", param.flatten().detach(),
+                                                   self.global_counter.value, {}))
+                            self.logq.put(LogEntry(LogType.HISTOGRAM, f"{name}-grads", param.grad.flatten().detach(),
+                                                   self.global_counter.value, {}))
 
-            # optimize shared nets
-            self.shared_optim.step()
-            self.shared_optim.zero_grad()
+                    # optimize shared nets
+                    self.shared_optim.step()
+                    self.shared_optim.zero_grad()
 
-        # close environment after training
-        # env.close()
+                # close environment after training
+                # env.close()
 
     def action(self, state):
         with torch.no_grad():

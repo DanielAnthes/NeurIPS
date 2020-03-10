@@ -14,12 +14,17 @@ class Agent:
         return   3 # random
 
 class Environment:
-    def __init__(self, ip = "127.0.0.1", port = 13000, size = 768, timescale = 1):
+    def __init__(self, ip="127.0.0.1", port=13000, size=768, timescale=1, step_cutoff=500, step_reward=0.1, lose_reward=-20, win_factor=2):
         self.client     = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ip         = ip
         self.port       = port
         self.size       = size
         self.timescale  = timescale
+
+        max_alive_reward = step_cutoff * step_reward
+        self.reward_step = step_reward
+        self.reward_lose = lose_reward
+        self.reward_win = max(10.0, win_factor * max_alive_reward)
 
         self.client.connect((ip, port))
 
@@ -44,6 +49,14 @@ class Environment:
         reward = data[1]
         state  = np.array([data[i] for i in range(2, len(data))]).reshape((self.size, self.size, 3)).astype(np.float64)
         state /= 256
+
+        if end:
+            if reward == 0:
+                reward = self.reward_lose
+            else:
+                reward = self.reward_win
+        else:
+            reward += self.reward_step
 
         return end, reward, state
 

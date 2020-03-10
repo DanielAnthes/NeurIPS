@@ -8,15 +8,15 @@ from threading import Thread
 
 def main():
     queue = Queue()
-    logger = Logger("logs/lander2", queue)
+    logger = Logger("logs/A3C/Neurosmash/modReward_cutoff800_e25e3", queue)
     log_thread = Thread(target=logger.run, name="logger")
     agent = A3C(queue)
     # agent.load(sorted(os.listdir("model"), key=lambda x: int(x), reverse=True)[0])
 
     try:
         log_thread.start()
-        agent.train(num_processes=12, episodes=5e5)
-        agent.save("model2-lander")
+        agent.train(num_processes=10, episodes=25e3)
+        agent.save("model_neuro3")
         print("FINISHED TRAINING")
         # agent.evaluate(10)
         # stop logger
@@ -26,7 +26,7 @@ def main():
     except KeyboardInterrupt as e:
         # if interrupt collect thread first
         queue.put(None)
-        agent.save("model2")
+        agent.save("model_neuro3")
         log_thread.join()
         raise e
 

@@ -17,7 +17,7 @@ from Worker import Worker
 class A3C:
 
     def __init__(self, queue):
-        self.actions = [0, 1, 2, 3]
+        self.actions = [0, 1, 2]
         # networks
         ch_in = 9 # 9 for NS
         self.convnet = N.CNN(ch_in, 64)
@@ -57,43 +57,43 @@ class A3C:
     def evaluate(self, num_eps):
         ### Gym
         # env = gym.make("CartPole-v1")
-        env = gym.make("LunarLander-v2")
+        # env = gym.make("LunarLander-v2")
         ### Neurosmash -> indent everything but the return
-        # with NSenv(port=9999, size=64, timescale=5) as env:
+        with NSenv(port=9999, size=64, timescale=15, step_cutoff=800, step_reward=0.1, lose_reward=-20, win_factor=2) as env:
 
-        done = False
-        rewards = list()
-        for i in range(num_eps):
-            ep_reward = 0
             done = False
-            ### Gym
-            env.reset()
-            currentstate = get_state(env)
-            # state = torch.FloatTensor([currentstate, currentstate, currentstate]).squeeze()
-
-            ### Neurosmash
-            # done, reward, state = env.reset()
-            # currentstate = torch.FloatTensor(NSscreen(state))
-            state = torch.cat((currentstate, currentstate, currentstate), 0)
-
-            while not done:
-                _, action = self.action(state)
-
+            rewards = list()
+            for i in range(num_eps):
+                ep_reward = 0
+                done = False
                 ### Gym
-                _, reward, done, _ = env.step(action)
-                newstate = torch.FloatTensor(get_state(env))
-                # state = torch.cat((state[1:, :, :], newstate), 0)
+                # env.reset()
+                # currentstate = get_state(env)
+                # state = torch.FloatTensor([currentstate, currentstate, currentstate]).squeeze()
 
                 ### Neurosmash
-                # done, reward, newstate = env.step(action)
-                # newstate = torch.FloatTensor(NSscreen(newstate))
-                state = torch.cat((state[3:, :, :], newstate), 0)
+                done, reward, state = env.reset()
+                currentstate = torch.FloatTensor(NSscreen(state))
+                state = torch.cat((currentstate, currentstate, currentstate), 0)
 
-                ep_reward += reward
+                while not done:
+                    _, action = self.action(state)
 
-            print(f"REWARD: {ep_reward}")
-            rewards.append(ep_reward)
-            env.close()
+                    ### Gym
+                    # _, reward, done, _ = env.step(action)
+                    # newstate = torch.FloatTensor(get_state(env))
+                    # state = torch.cat((state[1:, :, :], newstate), 0)
+
+                    ### Neurosmash
+                    done, reward, newstate = env.step(action)
+                    newstate = torch.FloatTensor(NSscreen(newstate))
+                    state = torch.cat((state[3:, :, :], newstate), 0)
+
+                    ep_reward += reward
+
+                print(f"REWARD: {ep_reward}")
+                rewards.append(ep_reward)
+                # env.close()
         return rewards
 
     def action(self, state):
